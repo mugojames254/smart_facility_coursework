@@ -1,0 +1,521 @@
+<title>Dev Setup Lab</title>
+<meta name="description" content="Follow-along install guide: VS Code, uv, Python, virtual environments and Jupyter — for Windows, macOS and Linux.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#e9ecec; --surface:#ffffff; --surface-2:#f3f6f6;
+    --ink:#152220; --muted:#576560; --faint:#8a9793;
+    --border:#d6dedc; --border-strong:#c2cccb;
+    --accent:#0e7b7b; --accent-ink:#0a5c5c; --accent-wash:#e3f0ef;
+    --warn:#a85808; --warn-bg:#fbf1e4; --warn-border:#efd6b3;
+    --ok:#137a48; --ok-bg:#e8f4ec; --ok-border:#bfe1cb;
+    --code-bg:#0e1a19; --code-surface:#152625; --code-ink:#d6e4e1;
+    --code-muted:#7f938f; --code-prompt:#3fb7ac; --code-border:#233634;
+    --shadow:0 1px 2px rgba(20,40,38,.05),0 8px 24px -14px rgba(20,40,38,.22);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1211; --surface:#111a19; --surface-2:#16211f;
+      --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
+      --border:#22302e; --border-strong:#2d3d3a;
+      --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
+      --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
+      --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
+      --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
+      --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1211; --surface:#111a19; --surface-2:#16211f;
+    --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
+    --border:#22302e; --border-strong:#2d3d3a;
+    --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
+    --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
+    --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
+    --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
+    --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+    font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:940px;margin:0 auto;padding:0 24px}
+
+  /* progress bar */
+  .progress-bar{position:sticky;top:0;z-index:40;height:4px;background:transparent}
+  .progress-fill{height:100%;width:0;background:var(--accent);transition:width .35s ease}
+
+  /* header */
+  header{padding:56px 0 30px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent-ink);font-weight:600;margin:0 0 14px}
+  h1{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;
+    font-size:clamp(2.3rem,6vw,3.6rem);line-height:1.02;letter-spacing:-.02em;
+    margin:0 0 16px;text-wrap:balance}
+  .lede{font-size:1.12rem;color:var(--muted);max-width:60ch;margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:22px;
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--faint)}
+  .meta b{color:var(--muted);font-weight:600}
+
+  /* sticky OS control */
+  .controls{position:sticky;top:4px;z-index:30;background:var(--bg);
+    padding:14px 0 12px;margin-bottom:8px;
+    border-bottom:1px solid var(--border)}
+  .controls-inner{display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between}
+  .os-label{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint);font-weight:600}
+  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:11px;padding:3px;gap:2px;flex-wrap:wrap}
+  .seg button{font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;font-weight:500;
+    color:var(--muted);background:transparent;border:0;padding:7px 13px;border-radius:8px;
+    cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+  .seg button:hover{color:var(--ink)}
+  .seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent-ink);
+    box-shadow:var(--shadow);font-weight:600}
+  .theme-toggle{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:9px;
+    padding:8px 12px;cursor:pointer;transition:color .15s,border-color .15s}
+  .theme-toggle:hover{color:var(--ink);border-color:var(--border-strong)}
+
+  /* steps */
+  main{padding:20px 0 40px;counter-reset:step}
+  .step{display:grid;grid-template-columns:52px 1fr;gap:22px;
+    padding:30px 0;border-top:1px solid var(--border)}
+  .step:first-of-type{border-top:0}
+  .stepnum{position:relative}
+  .stepnum .dot{position:sticky;top:82px;width:52px;height:52px;border-radius:14px;
+    background:var(--surface);border:1.5px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;
+    font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:1.35rem;
+    color:var(--accent-ink);box-shadow:var(--shadow);transition:background .2s,border-color .2s,color .2s}
+  .step.done .stepnum .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+  .step.done .stepnum .dot::after{content:"✓";font-size:1.5rem}
+  .step.done .stepnum .dot span{display:none}
+  .step-body h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;
+    font-size:1.5rem;letter-spacing:-.01em;margin:2px 0 6px;text-wrap:balance}
+  .step-body p{margin:0 0 14px;color:var(--muted)}
+  .step-body p strong{color:var(--ink);font-weight:600}
+  .inline-link{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-wash);
+    font-weight:500}
+  .inline-link:hover{border-bottom-color:var(--accent)}
+  code.ic{font-family:"IBM Plex Mono",monospace;font-size:.86em;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:5px;
+    padding:1px 5px;color:var(--accent-ink)}
+
+  /* code block */
+  .code{background:var(--code-bg);border:1px solid var(--code-border);border-radius:12px;
+    overflow:hidden;margin:0 0 16px;box-shadow:var(--shadow)}
+  .code-head{display:flex;align-items:center;justify-content:space-between;
+    padding:8px 12px 8px 14px;background:var(--code-surface);border-bottom:1px solid var(--code-border)}
+  .code-tag{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--code-muted);font-weight:500}
+  .copy{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--code-muted);
+    background:transparent;border:1px solid var(--code-border);border-radius:7px;
+    padding:5px 10px;cursor:pointer;transition:color .15s,border-color .15s}
+  .copy:hover{color:var(--code-ink);border-color:var(--code-muted)}
+  .copy.copied{color:var(--code-prompt);border-color:var(--code-prompt)}
+  pre{margin:0;padding:14px 16px;overflow-x:auto}
+  pre code{font-family:"IBM Plex Mono",monospace;font-size:13.5px;line-height:1.7;
+    color:var(--code-ink);white-space:pre;display:block}
+  pre .cmt{color:var(--code-muted)}
+  pre .pr{color:var(--code-prompt);user-select:none}
+
+  /* os-specific visibility */
+  [data-os]{display:none}
+  [data-os].os-on{display:block}
+
+  /* callouts */
+  .callout{border-radius:12px;padding:16px 18px;margin:0 0 16px;border:1px solid;
+    display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start}
+  .callout .ci{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;
+    width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center}
+  .callout p{margin:0 0 8px}
+  .callout p:last-child{margin:0}
+  .callout .ct{font-weight:600;display:block;margin-bottom:3px}
+  .verify{background:var(--ok-bg);border-color:var(--ok-border)}
+  .verify .ci{background:var(--ok);color:#fff}
+  .verify .ct{color:var(--ok)}
+  .verify code.ic{background:transparent;border-color:var(--ok-border);color:var(--ok)}
+  .warn{background:var(--warn-bg);border-color:var(--warn-border)}
+  .warn .ci{background:var(--warn);color:#fff}
+  .warn .ct{color:var(--warn)}
+  .warn code.ic{background:transparent;border-color:var(--warn-border);color:var(--warn)}
+  .tip{background:var(--accent-wash);border-color:var(--border)}
+  .tip .ci{background:var(--accent);color:#fff}
+  .tip .ct{color:var(--accent-ink)}
+
+  /* done toggle */
+  .done-row{margin-top:6px}
+  .done-btn{display:inline-flex;align-items:center;gap:10px;
+    font-family:"IBM Plex Sans",sans-serif;font-size:14px;font-weight:500;color:var(--muted);
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:9px 15px;cursor:pointer;transition:color .15s,border-color .15s,background .15s}
+  .done-btn:hover{border-color:var(--border-strong);color:var(--ink)}
+  .done-btn .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;font-size:12px;transition:background .15s,border-color .15s}
+  .step.done .done-btn{color:var(--ok);border-color:var(--ok-border);background:var(--ok-bg)}
+  .step.done .done-btn .box{background:var(--ok);border-color:var(--ok);color:#fff}
+
+  /* cheat sheet */
+  .cheat{margin:12px 0 60px;border:1px solid var(--border);border-radius:16px;
+    background:var(--surface);padding:26px 26px 10px;box-shadow:var(--shadow)}
+  .cheat h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:1.4rem;
+    margin:0 0 4px;letter-spacing:-.01em}
+  .cheat p{color:var(--muted);margin:0 0 18px;font-size:.95rem}
+
+  footer{padding:20px 0 60px;border-top:1px solid var(--border);
+    color:var(--faint);font-family:"IBM Plex Mono",monospace;font-size:12px}
+  footer a{color:var(--accent-ink);text-decoration:none}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+  @media (max-width:620px){
+    .step{grid-template-columns:40px 1fr;gap:14px}
+    .stepnum .dot{width:40px;height:40px;font-size:1.05rem}
+    .stepnum .dot::after{font-size:1.15rem}
+    header{padding:40px 0 22px}
+  }
+</style>
+
+<div class="progress-bar"><div class="progress-fill" id="pfill"></div></div>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Programming Bootcamp · Session 01</p>
+    <h1>Set up your machine to write Python</h1>
+    <p class="lede">Follow along, top to bottom. Pick your system once below and every command switches to match it. Check off each step as you go — your progress is saved on this device.</p>
+    <div class="meta">
+      <span><b>Editor</b> VS Code</span>
+      <span><b>Manager</b> uv</span>
+      <span><b>Runtime</b> Python 3.12</span>
+      <span><b>Notebook</b> Jupyter</span>
+    </div>
+  </header>
+</div>
+
+<div class="controls">
+  <div class="wrap controls-inner">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="os-label">Your system</span>
+      <div class="seg" role="group" aria-label="Choose your operating system">
+        <button data-set="win-cmd" aria-pressed="true">Windows · cmd</button>
+        <button data-set="win-ps" aria-pressed="false">Windows · PowerShell</button>
+        <button data-set="mac" aria-pressed="false">macOS</button>
+        <button data-set="linux" aria-pressed="false">Linux</button>
+      </div>
+    </div>
+    <button class="theme-toggle" id="themeBtn" aria-label="Toggle color theme">◐ theme</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <main>
+
+    <!-- STEP 1 : VS CODE -->
+    <section class="step" id="s1">
+      <div class="stepnum"><div class="dot"><span>1</span></div></div>
+      <div class="step-body">
+        <h2>Install VS Code</h2>
+        <p>The editor we write our code in. Download page for every system: <a class="inline-link" href="https://code.visualstudio.com/download" target="_blank" rel="noopener">code.visualstudio.com/download</a>. Or install straight from the terminal:</p>
+
+        <div data-os="win-cmd win-ps" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · winget</span><button class="copy">copy</button></div>
+            <pre><code>winget install --id Microsoft.VisualStudioCode -e</code></pre>
+          </div>
+        </div>
+
+        <div data-os="mac" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">macOS · Homebrew</span><button class="copy">copy</button></div>
+            <pre><code>brew install --cask visual-studio-code</code></pre>
+          </div>
+          <p style="font-size:.9rem"><span class="cmt"></span>No Homebrew yet? Install it from <a class="inline-link" href="https://brew.sh" target="_blank" rel="noopener">brew.sh</a>.</p>
+        </div>
+
+        <div data-os="linux" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Linux · Debian / Ubuntu</span><button class="copy">copy</button></div>
+<pre><code><span class="cmt"># add Microsoft's package repo, then install</span>
+sudo apt update &amp;&amp; sudo apt install -y wget gpg
+wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor &gt; microsoft.gpg
+sudo install -D -o root -g root -m 644 microsoft.gpg /usr/share/keyrings/microsoft.gpg
+echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | sudo tee /etc/apt/sources.list.d/vscode.list
+sudo apt update &amp;&amp; sudo apt install -y code</code></pre>
+          </div>
+        </div>
+
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct">Check it worked</span>
+            <p>Close and reopen the terminal, then run <code class="ic">code --version</code>. You should see a version number.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s1"><span class="box"></span> Mark step done</button></div>
+      </div>
+    </section>
+
+    <!-- STEP 2 : UV -->
+    <section class="step" id="s2">
+      <div class="stepnum"><div class="dot"><span>2</span></div></div>
+      <div class="step-body">
+        <h2>Install uv</h2>
+        <p><strong>uv</strong> is one fast tool that manages Python itself, virtual environments, and packages. Install it first — it installs Python for us in the next step.</p>
+
+        <div data-os="win-cmd win-ps" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · PowerShell</span><button class="copy">copy</button></div>
+            <pre><code>powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code></pre>
+          </div>
+          <p style="font-size:.9rem">Run this in <strong>PowerShell</strong> even if you use cmd for everything else — it is a one-time install.</p>
+        </div>
+
+        <div data-os="mac linux" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">macOS / Linux</span><button class="copy">copy</button></div>
+            <pre><code>curl -LsSf https://astral.sh/uv/install.sh | sh</code></pre>
+          </div>
+        </div>
+
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct">Check it worked</span>
+            <p>Open a <strong>new</strong> terminal, then run <code class="ic">uv --version</code>. If it says "not recognized" or "command not found", fully close every terminal and open a fresh one so it picks up the updated PATH.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s2"><span class="box"></span> Mark step done</button></div>
+      </div>
+    </section>
+
+    <!-- STEP 3 : PYTHON -->
+    <section class="step" id="s3">
+      <div class="stepnum"><div class="dot"><span>3</span></div></div>
+      <div class="step-body">
+        <h2>Install Python</h2>
+        <p>We let uv install and manage Python for us. The command is the <strong>same on every system</strong>:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">all systems</span><button class="copy">copy</button></div>
+          <pre><code>uv python install 3.12</code></pre>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct">Check it worked</span>
+            <p>Run <code class="ic">uv python list</code> — you should see <code class="ic">3.12</code> in the list.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s3"><span class="box"></span> Mark step done</button></div>
+      </div>
+    </section>
+
+    <!-- STEP 4 : VENV -->
+    <section class="step" id="s4">
+      <div class="stepnum"><div class="dot"><span>4</span></div></div>
+      <div class="step-body">
+        <h2>Create &amp; activate a virtual environment</h2>
+        <p>A virtual environment keeps each project's packages separate. From inside your project folder, create one:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">all systems · creates a .venv folder</span><button class="copy">copy</button></div>
+          <pre><code>uv venv</code></pre>
+        </div>
+
+        <p>Now <strong>activate</strong> it. The command depends on your terminal:</p>
+
+        <div data-os="win-cmd" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · Command Prompt</span><button class="copy">copy</button></div>
+            <pre><code>.venv\Scripts\activate.bat</code></pre>
+          </div>
+        </div>
+        <div data-os="win-ps" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · PowerShell</span><button class="copy">copy</button></div>
+            <pre><code>.venv\Scripts\Activate.ps1</code></pre>
+          </div>
+        </div>
+        <div data-os="mac linux" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">macOS / Linux</span><button class="copy">copy</button></div>
+            <pre><code>source .venv/bin/activate</code></pre>
+          </div>
+        </div>
+
+        <p>When active, your prompt shows <code class="ic">(.venv)</code> at the start. To leave it later, run <code class="ic">deactivate</code>.</p>
+
+        <div data-os="win-ps" class="osblock">
+          <div class="callout warn">
+            <div class="ci">!</div>
+            <div>
+              <span class="ct">PowerShell blocks the activation script?</span>
+              <p>If <code class="ic">Activate.ps1</code> errors with <em>"…cannot be loaded because running scripts is disabled on this system"</em>, PowerShell is blocking the <code class="ic">.ps1</code> script. Allow signed local scripts for your user — <strong>run once</strong>:</p>
+              <div class="code" style="margin-top:4px">
+                <div class="code-head"><span class="code-tag">PowerShell · run once</span><button class="copy">copy</button></div>
+                <pre><code>Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser</code></pre>
+              </div>
+              <p>Answer <code class="ic">Y</code> if prompted, then run the activation command again. Prefer not to change it? Use <strong>Command Prompt</strong> instead — <code class="ic">activate.bat</code> is not affected by this setting.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="done-row"><button class="done-btn" data-done="s4"><span class="box"></span> Mark step done</button></div>
+      </div>
+    </section>
+
+    <!-- STEP 5 : JUPYTER -->
+    <section class="step" id="s5">
+      <div class="stepnum"><div class="dot"><span>5</span></div></div>
+      <div class="step-body">
+        <h2>Install Jupyter Notebook</h2>
+        <p>With the environment <strong>activated</strong> (<code class="ic">(.venv)</code> showing in your prompt), install the notebook packages:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">inside the active .venv</span><button class="copy">copy</button></div>
+          <pre><code>uv pip install jupyter ipykernel</code></pre>
+        </div>
+        <p><code class="ic">jupyter</code> is the notebook app; <code class="ic">ipykernel</code> lets this environment run as a notebook kernel. Now register it so notebooks can find your project's Python:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">register the kernel</span><button class="copy">copy</button></div>
+          <pre><code>python -m ipykernel install --user --name=project-venv --display-name "Python (project-venv)"</code></pre>
+        </div>
+        <p>Launch it:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">opens in your browser</span><button class="copy">copy</button></div>
+          <pre><code>jupyter notebook</code></pre>
+        </div>
+
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct">Prefer to stay in VS Code?</span>
+            <p>Open any <code class="ic">.ipynb</code> file directly in VS Code. Install the <strong>Python</strong> and <strong>Jupyter</strong> extensions (Extensions panel, <code class="ic">Ctrl+Shift+X</code>), then pick the <strong>Python (project-venv)</strong> kernel in the notebook's top-right corner.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s5"><span class="box"></span> Mark step done</button></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- CHEAT SHEET -->
+  <section class="cheat">
+    <h2>One-screen cheat sheet</h2>
+    <p>Everything above, in order — for reference once you know the flow.</p>
+    <div class="code">
+      <div class="code-head"><span class="code-tag" id="cheatTag">Windows · cmd</span><button class="copy">copy</button></div>
+      <pre><code id="cheatCode"></code></pre>
+    </div>
+  </section>
+
+  <footer>
+    Programming Bootcamp · setup guide · works on Windows, macOS &amp; Linux ·
+    editor <a href="https://code.visualstudio.com" target="_blank" rel="noopener">VS Code</a> ·
+    manager <a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener">uv</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var KEY_OS="setup.os", KEY_DONE="setup.done", KEY_THEME="setup.theme";
+
+  /* ---- OS switching ---- */
+  var buttons=document.querySelectorAll(".seg button");
+  function applyOS(os){
+    document.querySelectorAll("[data-os]").forEach(function(el){
+      var list=el.getAttribute("data-os").split(/\s+/);
+      el.classList.toggle("os-on", list.indexOf(os)!==-1);
+    });
+    buttons.forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.set===os?"true":"false"); });
+    renderCheat(os);
+    try{ localStorage.setItem(KEY_OS, os); }catch(e){}
+  }
+  buttons.forEach(function(b){ b.addEventListener("click", function(){ applyOS(b.dataset.set); }); });
+
+  /* ---- cheat sheet (per-OS) ---- */
+  var C="<span class='cmt'>#</span>", P="<span class='pr'>$</span> ";
+  function line(pr,txt){ return (pr?"<span class='pr'>"+pr+"</span> ":"")+txt; }
+  function cheatFor(os){
+    var activate = {
+      "win-cmd":".venv\\Scripts\\activate.bat",
+      "win-ps":".venv\\Scripts\\Activate.ps1",
+      "mac":"source .venv/bin/activate",
+      "linux":"source .venv/bin/activate"
+    }[os];
+    var uv = (os==="mac"||os==="linux")
+      ? "curl -LsSf https://astral.sh/uv/install.sh | sh"
+      : "powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\"";
+    var L=[];
+    L.push("<span class='cmt'># 1 · install VS Code (winget / brew / apt) — see step 1</span>");
+    L.push("<span class='cmt'># 2 · install uv</span>");
+    L.push(uv);
+    L.push("<span class='cmt'># 3 · install Python</span>");
+    L.push("uv python install 3.12");
+    L.push("<span class='cmt'># 4 · create + activate the virtual environment</span>");
+    L.push("uv venv");
+    L.push(activate);
+    L.push("<span class='cmt'># 5 · install &amp; launch Jupyter</span>");
+    L.push("uv pip install jupyter ipykernel");
+    L.push("python -m ipykernel install --user --name=project-venv --display-name \"Python (project-venv)\"");
+    L.push("jupyter notebook");
+    return L.join("\n");
+  }
+  var tagText={ "win-cmd":"Windows · cmd","win-ps":"Windows · PowerShell","mac":"macOS","linux":"Linux" };
+  function renderCheat(os){
+    document.getElementById("cheatCode").innerHTML=cheatFor(os);
+    document.getElementById("cheatTag").textContent=tagText[os];
+  }
+
+  /* ---- copy buttons ---- */
+  document.addEventListener("click", function(e){
+    var btn=e.target.closest(".copy"); if(!btn) return;
+    var code=btn.closest(".code").querySelector("pre code");
+    var text=code.innerText;
+    function ok(){ btn.classList.add("copied"); var o=btn.textContent; btn.textContent="copied ✓";
+      setTimeout(function(){ btn.classList.remove("copied"); btn.textContent=o; },1400); }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(ok,ok); }
+    else { try{ var t=document.createElement("textarea"); t.value=text; document.body.appendChild(t);
+      t.select(); document.execCommand("copy"); document.body.removeChild(t); ok(); }catch(e){} }
+  });
+
+  /* ---- done tracking + progress ---- */
+  var steps=["s1","s2","s3","s4","s5"], done={};
+  try{ done=JSON.parse(localStorage.getItem(KEY_DONE))||{}; }catch(e){ done={}; }
+  function saveDone(){ try{ localStorage.setItem(KEY_DONE, JSON.stringify(done)); }catch(e){} }
+  function refresh(){
+    var n=0;
+    steps.forEach(function(id){
+      var el=document.getElementById(id);
+      if(done[id]){ el.classList.add("done"); n++; } else { el.classList.remove("done"); }
+      var b=el.querySelector(".done-btn .box");
+      if(b) b.textContent = done[id] ? "✓" : "";
+      var lbl=el.querySelector(".done-btn");
+      if(lbl) lbl.childNodes[lbl.childNodes.length-1].nodeValue = done[id] ? " Step complete" : " Mark step done";
+    });
+    document.getElementById("pfill").style.width=(n/steps.length*100)+"%";
+  }
+  document.querySelectorAll(".done-btn").forEach(function(b){
+    b.addEventListener("click", function(){ var id=b.dataset.done; done[id]=!done[id]; saveDone(); refresh(); });
+  });
+
+  /* ---- theme toggle ---- */
+  var root=document.documentElement, tb=document.getElementById("themeBtn");
+  try{ var st=localStorage.getItem(KEY_THEME); if(st) root.setAttribute("data-theme",st); }catch(e){}
+  tb.addEventListener("click", function(){
+    var cur=root.getAttribute("data-theme");
+    var mqDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
+    var next = cur ? (cur==="dark"?"light":"dark") : (mqDark?"light":"dark");
+    root.setAttribute("data-theme",next);
+    try{ localStorage.setItem(KEY_THEME,next); }catch(e){}
+  });
+
+  /* ---- init ---- */
+  var savedOS="win-cmd";
+  try{ savedOS=localStorage.getItem(KEY_OS)||"win-cmd"; }catch(e){}
+  applyOS(savedOS);
+  refresh();
+})();
+</script>
