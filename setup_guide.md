@@ -174,4 +174,7 @@ uv venv                         # 4. create virtual environment
 uv pip install jupyter ipykernel   # 5. Jupyter
 python -m ipykernel install --user --name=project-venv --display-name "Python (project-venv)"
 jupyter notebook
+
+
+Website url: https://mugojames254.github.io/smart_facility_coursework/
 ```
