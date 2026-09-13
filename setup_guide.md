@@ -44,7 +44,42 @@ code --version
 
 ---
 
-## 2. Install uv (Python package & project manager)
+## 2. Install Git
+
+Git is the version-control tool we use to download class projects and track your changes. You will also need a free **GitHub** account to clone and push code — sign up at https://github.com/signup if you don't have one.
+
+### Windows (command line)
+```powershell
+winget install --id Git.Git -e
+```
+
+### macOS (command line)
+Requires [Homebrew](https://brew.sh). Run:
+```bash
+brew install git
+```
+
+### Linux (command line)
+Debian / Ubuntu:
+```bash
+sudo apt update && sudo apt install -y git
+```
+
+### Set your identity (all systems)
+Do this once so your commits are labelled. Use the email tied to your GitHub account:
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+```
+
+**Verify:** open a new terminal, then run:
+```bash
+git --version
+```
+
+---
+
+## 3. Install uv (Python package & project manager)
 
 `uv` is a fast tool that manages Python itself, virtual environments, and packages — all in one. Install it first; it will install Python for us in the next step.
 
@@ -66,7 +101,7 @@ uv --version
 
 ---
 
-## 3. Install Python (with uv)
+## 4. Install Python (with uv)
 
 We let `uv` install and manage Python. Same command on every system:
 ```bash
@@ -81,7 +116,7 @@ You should see `3.12` listed.
 
 ---
 
-## 4. Create & Activate a Virtual Environment
+## 5. Create & Activate a Virtual Environment
 
 A virtual environment keeps each project's packages isolated.
 
@@ -133,7 +168,7 @@ Type `Y` and press Enter if prompted. Then run the activation command again.
 
 ---
 
-## 5. Install Jupyter Notebook
+## 6. Install Jupyter Notebook
 
 With the virtual environment **activated** (`(.venv)` visible in your prompt), install the notebook packages:
 
@@ -160,26 +195,65 @@ This opens Jupyter in your web browser. Create a new notebook and pick the **Pyt
 
 ---
 
+## 7. Install PyTorch
+
+**PyTorch** is the deep-learning library behind object detection and vision-language models. Install it **inside your activated `(.venv)`**. Which command you use depends on whether you have an NVIDIA GPU.
+
+### Windows / Linux — check for an NVIDIA GPU first
+```bash
+nvidia-smi
+```
+- If this prints a table of GPU info → use the **CUDA** command.
+- If it errors or is "not found" → use the **CPU** command.
+
+**NVIDIA GPU (CUDA):**
+```bash
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+```
+
+**No GPU (CPU only):**
+```bash
+uv pip install torch torchvision
+```
+
+### macOS (Apple Silicon / Intel)
+```bash
+uv pip install torch torchvision
+```
+> Apple Silicon GPUs are used automatically through MPS — no extra command. There is no CUDA on macOS.
+
+**Verify:**
+```bash
+python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+```
+`True` means the GPU is ready. `False` is fine too — it just runs on CPU, only slower.
+
+---
+
 ## Quick Recap (cheat sheet)
 
 ```bash
 # 1. VS Code    -> installed via winget / brew / apt (see Section 1)
-# 2. uv         -> installed via install script (see Section 2)
-uv python install 3.12          # 3. Python
-uv venv                         # 4. create virtual environment
+# 2. Git        -> installed via winget / brew / apt (see Section 2)
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+# 3. uv         -> installed via install script (see Section 3)
+uv python install 3.12          # 4. Python
+uv venv                         # 5. create virtual environment
 # activate:
 #   cmd         : .venv\Scripts\activate.bat
 #   PowerShell  : .venv\Scripts\Activate.ps1
 #   mac/linux   : source .venv/bin/activate
-uv pip install jupyter ipykernel   # 5. Jupyter
+uv pip install jupyter ipykernel   # 6. Jupyter
 python -m ipykernel install --user --name=project-venv --display-name "Python (project-venv)"
 jupyter notebook
+uv pip install torch torchvision   # 7. PyTorch (NVIDIA GPU: add --index-url https://download.pytorch.org/whl/cu124)
 ```
 
 ---
 
 ## Follow-along website
 
-Full interactive version (copy buttons, per-OS commands, progress tracking):
+Full interactive version (copy buttons, per-OS commands, Korean/English toggle, progress tracking):
 
 **🔗 [mugojames254.github.io/smart_facility_coursework](https://mugojames254.github.io/smart_facility_coursework/)**
