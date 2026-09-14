@@ -72,6 +72,12 @@
   .meta{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:22px;
     font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--faint)}
   .meta b{color:var(--muted);font-weight:600}
+  .slides-btn{display:inline-flex;align-items:center;gap:8px;margin-top:22px;
+    padding:10px 18px;background:var(--accent);color:#fff;font-weight:600;font-size:14px;
+    text-decoration:none;border-radius:8px;box-shadow:var(--shadow);
+    transition:background .2s,transform .1s}
+  .slides-btn:hover{background:var(--accent-ink)}
+  .slides-btn:active{transform:translateY(1px)}
 
   /* sticky OS control */
   .controls{position:sticky;top:4px;z-index:30;background:var(--bg);
@@ -202,7 +208,7 @@
 
 <div class="wrap">
   <header>
-    <p class="eyebrow i18n" data-ko='스마트 시설 관리 - 실습 세션 · 2주차'>Smart Facility Management - Practical Session · Week 02</p>
+    <p class="eyebrow i18n" data-ko='스마트 시설 관리 - 실습 세션 · 2주차'>Smart Facility Management - Practical Session · Week 02 . (For any queries please feel free to reachout: mugojames254@gmail.com)</p>
     <h1 class="i18n" data-ko='시작하기: 작업 환경 설정하기'>Getting Started: Setting up Your Workstation</h1>
     <p class="lede i18n" data-ko='위에서 아래로 순서대로 따라오세요. 아래에서 사용하는 운영체제를 한 번 선택하면 모든 명령어가 그에 맞게 바뀝니다. 각 단계를 마칠 때마다 체크하세요 — 진행 상황은 이 기기에 저장됩니다.'>Follow along, top to bottom. Pick your system once below and every command switches to match it. Check off each step as you go — your progress is saved on this device.</p>
     <div class="meta">
@@ -213,6 +219,10 @@
       <span class="i18n" data-ko='<b>노트북</b> Jupyter'><b>Notebook</b> Jupyter</span>
       <span class="i18n" data-ko='<b>딥러닝</b> PyTorch'><b>Deep Learning</b> PyTorch</span>
     </div>
+    <a class="slides-btn" href="smart_facility_setup.pptx" download>
+      <span aria-hidden="true">⬇</span>
+      <span class="i18n" data-ko='수업 자료 슬라이드 내려받기 (.pptx)'>Download class slides (.pptx)</span>
+    </a>
   </header>
 </div>
 
