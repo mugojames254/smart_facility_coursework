@@ -65,6 +65,30 @@ Debian / Ubuntu:
 sudo apt update && sudo apt install -y git
 ```
 
+### Install GitHub CLI (`gh`) — for authentication (all systems)
+`gh` lets you log in to GitHub once, then clone and push over HTTPS without pasting a token every time. It works the same on Windows, macOS, and Linux.
+
+**Windows (Command Prompt / PowerShell):**
+```powershell
+winget install --id GitHub.cli -e
+```
+
+**macOS (Homebrew):**
+```bash
+brew install gh
+```
+
+**Linux (Debian / Ubuntu):**
+```bash
+sudo apt update && sudo apt install -y gh
+```
+
+Then log in (all systems) and follow the prompts — choose **GitHub.com**, **HTTPS**, and **Login with a web browser**:
+```bash
+gh auth login
+```
+This also sets `gh` as your Git credential helper, so `git clone` / `git push` just work.
+
 ### Set your identity (all systems)
 Do this once so your commits are labelled. Use the email tied to your GitHub account:
 ```bash
@@ -75,6 +99,7 @@ git config --global user.email "you@example.com"
 **Verify:** open a new terminal, then run:
 ```bash
 git --version
+gh --version
 ```
 
 ---
@@ -234,7 +259,8 @@ python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
 
 ```bash
 # 1. VS Code    -> installed via winget / brew / apt (see Section 1)
-# 2. Git        -> installed via winget / brew / apt (see Section 2)
+# 2. Git + gh   -> installed via winget / brew / apt (see Section 2)
+gh auth login                   # log in to GitHub (HTTPS, browser)
 git config --global user.name "Your Name"
 git config --global user.email "you@example.com"
 # 3. uv         -> installed via install script (see Section 3)
