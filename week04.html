@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facility Scan Lab</title>
+<meta name="description" content="Week 4 practical: start a Python project with uv init, uv venv and uv add, then explore real UGV scan data of a building corridor.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+  :root{
+    --bg:#e9ecec; --surface:#ffffff; --surface-2:#f3f6f6;
+    --ink:#152220; --muted:#576560; --faint:#8a9793;
+    --border:#d6dedc; --border-strong:#c2cccb;
+    --accent:#0e7b7b; --accent-ink:#0a5c5c; --accent-wash:#e3f0ef;
+    --warn:#a85808; --warn-bg:#fbf1e4; --warn-border:#efd6b3;
+    --ok:#137a48; --ok-bg:#e8f4ec; --ok-border:#bfe1cb;
+    --code-bg:#0e1a19; --code-surface:#152625; --code-ink:#d6e4e1;
+    --code-muted:#7f938f; --code-prompt:#3fb7ac; --code-border:#233634;
+    --shadow:0 1px 2px rgba(20,40,38,.05),0 8px 24px -14px rgba(20,40,38,.22);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1211; --surface:#111a19; --surface-2:#16211f;
+      --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
+      --border:#22302e; --border-strong:#2d3d3a;
+      --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
+      --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
+      --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
+      --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
+      --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1211; --surface:#111a19; --surface-2:#16211f;
+    --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
+    --border:#22302e; --border-strong:#2d3d3a;
+    --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
+    --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
+    --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
+    --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
+    --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+    font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  html[lang="ko"] body{
+    font-family:"IBM Plex Sans","Noto Sans KR",ui-sans-serif,system-ui,sans-serif;
+  }
+  .wrap{max-width:940px;margin:0 auto;padding:0 24px}
+
+  /* progress bar */
+  .progress-bar{position:sticky;top:0;z-index:40;height:4px;background:transparent}
+  .progress-fill{height:100%;width:0;background:var(--accent);transition:width .35s ease}
+
+  /* header */
+  header{padding:56px 0 30px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent-ink);font-weight:600;margin:0 0 14px}
+  h1{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;
+    font-size:clamp(2.3rem,6vw,3.6rem);line-height:1.02;letter-spacing:-.02em;
+    margin:0 0 16px;text-wrap:balance}
+  .lede{font-size:1.12rem;color:var(--muted);max-width:60ch;margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:22px;
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--faint)}
+  .meta b{color:var(--muted);font-weight:600}
+  .slides-btn{display:inline-flex;align-items:center;gap:8px;margin-top:22px;
+    padding:10px 18px;background:var(--accent);color:#fff;font-weight:600;font-size:14px;
+    text-decoration:none;border-radius:8px;box-shadow:var(--shadow);
+    transition:background .2s,transform .1s}
+  .slides-btn:hover{background:var(--accent-ink)}
+  .slides-btn:active{transform:translateY(1px)}
+
+  /* sticky OS control */
+  .controls{position:sticky;top:4px;z-index:30;background:var(--bg);
+    padding:14px 0 12px;margin-bottom:8px;
+    border-bottom:1px solid var(--border)}
+  .controls-inner{display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between}
+  .os-label{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint);font-weight:600}
+  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:11px;padding:3px;gap:2px;flex-wrap:wrap}
+  .seg button{font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;font-weight:500;
+    color:var(--muted);background:transparent;border:0;padding:7px 13px;border-radius:8px;
+    cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+  .seg button:hover{color:var(--ink)}
+  .seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent-ink);
+    box-shadow:var(--shadow);font-weight:600}
+  .util{display:flex;align-items:center;gap:8px}
+  .theme-toggle,.lang-toggle{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:9px;
+    padding:8px 12px;cursor:pointer;transition:color .15s,border-color .15s}
+  .theme-toggle:hover,.lang-toggle:hover{color:var(--ink);border-color:var(--border-strong)}
+  .lang-toggle{font-weight:600;min-width:64px}
+  html[lang="ko"] .lang-toggle,html[lang="ko"] .os-label,html[lang="ko"] .eyebrow,
+  html[lang="ko"] .meta,html[lang="ko"] .code-tag{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
+
+  /* steps */
+  main{padding:20px 0 40px;counter-reset:step}
+  .step{display:grid;grid-template-columns:52px 1fr;gap:22px;
+    padding:30px 0;border-top:1px solid var(--border)}
+  .step:first-of-type{border-top:0}
+  .stepnum{position:relative}
+  .stepnum .dot{position:sticky;top:82px;width:52px;height:52px;border-radius:14px;
+    background:var(--surface);border:1.5px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;
+    font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:1.35rem;
+    color:var(--accent-ink);box-shadow:var(--shadow);transition:background .2s,border-color .2s,color .2s}
+  .step.done .stepnum .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+  .step.done .stepnum .dot::after{content:"✓";font-size:1.5rem}
+  .step.done .stepnum .dot span{display:none}
+  .step-body h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;
+    font-size:1.5rem;letter-spacing:-.01em;margin:2px 0 6px;text-wrap:balance}
+  .step-body p{margin:0 0 14px;color:var(--muted)}
+  .step-body p strong{color:var(--ink);font-weight:600}
+  .inline-link{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-wash);
+    font-weight:500}
+  .inline-link:hover{border-bottom-color:var(--accent)}
+  code.ic{font-family:"IBM Plex Mono",monospace;font-size:.86em;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:5px;
+    padding:1px 5px;color:var(--accent-ink)}
+
+  /* code block */
+  .code{background:var(--code-bg);border:1px solid var(--code-border);border-radius:12px;
+    overflow:hidden;margin:0 0 16px;box-shadow:var(--shadow)}
+  .code-head{display:flex;align-items:center;justify-content:space-between;
+    padding:8px 12px 8px 14px;background:var(--code-surface);border-bottom:1px solid var(--code-border)}
+  .code-tag{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--code-muted);font-weight:500}
+  .copy{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--code-muted);
+    background:transparent;border:1px solid var(--code-border);border-radius:7px;
+    padding:5px 10px;cursor:pointer;transition:color .15s,border-color .15s}
+  .copy:hover{color:var(--code-ink);border-color:var(--code-muted)}
+  .copy.copied{color:var(--code-prompt);border-color:var(--code-prompt)}
+  pre{margin:0;padding:14px 16px;overflow-x:auto}
+  pre code{font-family:"IBM Plex Mono",monospace;font-size:13.5px;line-height:1.7;
+    color:var(--code-ink);white-space:pre;display:block}
+  pre .cmt{color:var(--code-muted)}
+  pre .pr{color:var(--code-prompt);user-select:none}
+
+  /* os-specific visibility */
+  [data-os]{display:none}
+  [data-os].os-on{display:block}
+
+  /* callouts */
+  .callout{border-radius:12px;padding:16px 18px;margin:0 0 16px;border:1px solid;
+    display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start}
+  .callout .ci{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;
+    width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center}
+  .callout p{margin:0 0 8px}
+  .callout p:last-child{margin:0}
+  .callout .ct{font-weight:600;display:block;margin-bottom:3px}
+  .verify{background:var(--ok-bg);border-color:var(--ok-border)}
+  .verify .ci{background:var(--ok);color:#fff}
+  .verify .ct{color:var(--ok)}
+  .verify code.ic{background:transparent;border-color:var(--ok-border);color:var(--ok)}
+  .warn{background:var(--warn-bg);border-color:var(--warn-border)}
+  .warn .ci{background:var(--warn);color:#fff}
+  .warn .ct{color:var(--warn)}
+  .warn code.ic{background:transparent;border-color:var(--warn-border);color:var(--warn)}
+  .tip{background:var(--accent-wash);border-color:var(--border)}
+  .tip .ci{background:var(--accent);color:#fff}
+  .tip .ct{color:var(--accent-ink)}
+
+  /* done toggle */
+  .done-row{margin-top:6px}
+  .done-btn{display:inline-flex;align-items:center;gap:10px;
+    font-family:"IBM Plex Sans",sans-serif;font-size:14px;font-weight:500;color:var(--muted);
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:9px 15px;cursor:pointer;transition:color .15s,border-color .15s,background .15s}
+  .done-btn:hover{border-color:var(--border-strong);color:var(--ink)}
+  .done-btn .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;font-size:12px;transition:background .15s,border-color .15s}
+  .step.done .done-btn{color:var(--ok);border-color:var(--ok-border);background:var(--ok-bg)}
+  .step.done .done-btn .box{background:var(--ok);border-color:var(--ok);color:#fff}
+
+  /* cheat sheet */
+  .cheat{margin:12px 0 60px;border:1px solid var(--border);border-radius:16px;
+    background:var(--surface);padding:26px 26px 10px;box-shadow:var(--shadow)}
+  .cheat h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:1.4rem;
+    margin:0 0 4px;letter-spacing:-.01em}
+  .cheat p{color:var(--muted);margin:0 0 18px;font-size:.95rem}
+
+  footer{padding:20px 0 60px;border-top:1px solid var(--border);
+    color:var(--faint);font-family:"IBM Plex Mono",monospace;font-size:12px}
+  footer a{color:var(--accent-ink);text-decoration:none}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+  @media (max-width:620px){
+    .step{grid-template-columns:40px 1fr;gap:14px}
+    .stepnum .dot{width:40px;height:40px;font-size:1.05rem}
+    .stepnum .dot::after{font-size:1.15rem}
+    header{padding:40px 0 22px}
+  }
+
+  /* week 4 additions */
+  .step-body{min-width:0}
+  .btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .btn-row .slides-btn{margin-top:0}
+  .ghost-btn{background:var(--surface);color:var(--accent-ink);border:1px solid var(--border)}
+  .ghost-btn:hover{background:var(--surface-2)}
+  .tree{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:4px 0;margin:0 0 16px;overflow-x:auto}
+  .tree table{width:100%;border-collapse:collapse;font-size:.92rem}
+  .tree td{padding:8px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+  .tree tr:first-child td{border-top:0}
+  .tree td:first-child{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--accent-ink);
+    white-space:nowrap;font-weight:500}
+  figure{margin:0 0 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    overflow:hidden;box-shadow:var(--shadow)}
+  figure img{display:block;width:100%;height:auto;background:#fff}
+  figcaption{padding:10px 14px;font-size:.88rem;color:var(--faint);border-top:1px solid var(--border)}
+  .fig-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 16px}
+  .fig-pair figure{margin:0}
+  .fig-pair img{aspect-ratio:4/3;object-fit:cover}
+  @media (max-width:620px){.fig-pair{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="progress-bar"><div class="progress-fill" id="pfill"></div></div>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow i18n" data-ko='스마트 시설 관리 - 실습 세션 · 4주차'>Smart Facility Management - Practical Session · Week 04 . (For any queries please feel free to reachout: mugojames254@skku.edu)</p>
+    <h1 class="i18n" data-ko='첫 프로젝트: 로봇 스캔 데이터 탐색하기'>Your First Project: Exploring a Robot's Facility Scan</h1>
+    <p class="lede i18n" data-ko='<code class="ic">uv</code> 로 새 Python 프로젝트를 만들고, 필요한 라이브러리를 추가한 뒤, 무인 지상 차량(UGV)이 건물 복도를 주행하며 수집한 실제 데이터를 열어 봅니다. 위에서 아래로 순서대로 따라오세요.'>Create a new Python project with <code class="ic">uv</code>, add the libraries you need, then open real data that our unmanned ground vehicle (UGV) collected while driving through a building corridor. Follow along, top to bottom.</p>
+    <div class="meta">
+      <span class="i18n" data-ko='<b>프로젝트</b> uv init'><b>Project</b> uv init</span>
+      <span class="i18n" data-ko='<b>환경</b> uv venv'><b>Environment</b> uv venv</span>
+      <span class="i18n" data-ko='<b>패키지</b> uv add'><b>Packages</b> uv add</span>
+      <span class="i18n" data-ko='<b>라이브러리</b> numpy · pandas · matplotlib · open3d'><b>Libraries</b> numpy · pandas · matplotlib · open3d</span>
+      <span class="i18n" data-ko='<b>데이터</b> UGV 라이다 + 카메라 스캔'><b>Data</b> UGV lidar + camera scan</span>
+    </div>
+    <div class="btn-row">
+      <a class="slides-btn" href="class_data.zip" download>
+        <span aria-hidden="true">⬇</span>
+        <span class="i18n" data-ko='수업 데이터 내려받기 (.zip, 16 MB)'>Download class data (.zip, 16 MB)</span>
+      </a>
+      <a class="slides-btn ghost-btn" href="index.html">
+        <span aria-hidden="true">←</span>
+        <span class="i18n" data-ko='2주차: 설치 가이드'>Week 2: setup guide</span>
+      </a>
+    </div>
+  </header>
+</div>
+
+<div class="controls">
+  <div class="wrap controls-inner">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="os-label i18n" data-ko='사용 중인 시스템'>Your system</span>
+      <div class="seg" role="group" aria-label="Choose your operating system">
+        <button data-set="win-cmd" aria-pressed="true">Windows · cmd</button>
+        <button data-set="win-ps" aria-pressed="false">Windows · PowerShell</button>
+        <button data-set="mac" aria-pressed="false">macOS</button>
+        <button data-set="linux" aria-pressed="false">Linux</button>
+      </div>
+    </div>
+    <div class="util">
+      <button class="lang-toggle" id="langBtn" aria-label="Switch language">한국어</button>
+      <button class="theme-toggle" id="themeBtn" aria-label="Toggle color theme">◐ theme</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <main>
+
+    <!-- STEP 1 : UV INIT -->
+    <section class="step" id="s1">
+      <div class="stepnum"><div class="dot"><span>1</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='새 프로젝트 만들기'>Create a new project</h2>
+        <p class="i18n" data-ko='2주차에는 빈 폴더에 가상 환경만 만들었습니다. 이번에는 <strong>uv 프로젝트</strong> 를 만듭니다 — 어떤 Python 버전과 어떤 라이브러리가 필요한지 기록해 두는 폴더입니다. 수업 작업을 보관할 폴더(예: 문서 폴더)로 이동한 뒤 실행하세요:'>In Week 2 we only made a virtual environment inside an empty folder. This time we make a <strong>uv project</strong> — a folder that also records which Python version and which libraries it needs. Move to the folder where you keep class work (for example, Documents), then run:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템'>all systems</span><button class="copy">copy</button></div>
+<pre><code>uv init facility-scan --python 3.12
+cd facility-scan</code></pre>
+        </div>
+        <p class="i18n" data-ko='<code class="ic">facility-scan</code> 은 프로젝트 이름이자 새 폴더 이름입니다. <code class="ic">--python 3.12</code> 는 2주차에 설치한 Python 버전을 사용하도록 고정합니다.'><code class="ic">facility-scan</code> is the project name and the name of the new folder. <code class="ic">--python 3.12</code> pins the project to the Python version we installed in Week 2.</p>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='<code class="ic">Initialized project `facility-scan`</code> 메시지가 보이고, 프롬프트가 <code class="ic">facility-scan</code> 폴더 안에 있어야 합니다.'>You should see <code class="ic">Initialized project `facility-scan`</code>, and your prompt should now be inside the <code class="ic">facility-scan</code> folder.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s1"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 2 : WHAT UV CREATED -->
+    <section class="step" id="s2">
+      <div class="stepnum"><div class="dot"><span>2</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='uv가 만든 파일 살펴보기'>Look at what uv created</h2>
+        <p class="i18n" data-ko='VS Code로 프로젝트 폴더를 여세요:'>Open the project folder in VS Code:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템'>all systems</span><button class="copy">copy</button></div>
+          <pre><code>code .</code></pre>
+        </div>
+        <p class="i18n" data-ko='<code class="ic">uv init</code> 이 만든 파일들입니다:'><code class="ic">uv init</code> created these files:</p>
+        <div class="tree">
+          <table>
+            <tr><td>pyproject.toml</td><td class="i18n" data-ko='프로젝트의 &quot;신분증&quot;. 이름, Python 버전, 그리고 필요한 라이브러리 목록 (<code class="ic">dependencies</code>, 지금은 비어 있음).'>The project's "ID card": name, Python version, and the list of libraries it needs (<code class="ic">dependencies</code>, empty for now).</td></tr>
+            <tr><td>.python-version</td><td class="i18n" data-ko='이 프로젝트가 사용할 Python 버전 (<code class="ic">3.12</code>).'>The Python version this project uses (<code class="ic">3.12</code>).</td></tr>
+            <tr><td>main.py</td><td class="i18n" data-ko='&quot;Hello&quot;를 출력하는 예제 스크립트.'>A sample script that prints a hello message.</td></tr>
+            <tr><td>README.md</td><td class="i18n" data-ko='프로젝트 설명을 적는 곳.'>Where you describe the project.</td></tr>
+            <tr><td>.git/ · .gitignore</td><td class="i18n" data-ko='uv가 Git 저장소도 만들어 줍니다. <code class="ic">.gitignore</code> 는 <code class="ic">.venv</code> 가 GitHub에 올라가지 않게 막습니다.'>uv also starts a Git repository. <code class="ic">.gitignore</code> keeps <code class="ic">.venv</code> out of GitHub.</td></tr>
+          </table>
+        </div>
+        <p class="i18n" data-ko='<code class="ic">pyproject.toml</code> 을 열어 보세요:'>Open <code class="ic">pyproject.toml</code>:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">pyproject.toml</span><button class="copy">copy</button></div>
+<pre><code>[project]
+name = "facility-scan"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "&gt;=3.12"
+dependencies = []</code></pre>
+        </div>
+        <p class="i18n" data-ko='예제 스크립트를 실행해 보세요:'>Run the sample script:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템'>all systems</span><button class="copy">copy</button></div>
+          <pre><code>uv run main.py</code></pre>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='<code class="ic">Hello from facility-scan!</code> 이 출력되어야 합니다.'>It should print <code class="ic">Hello from facility-scan!</code></p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s2"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 3 : VENV -->
+    <section class="step" id="s3">
+      <div class="stepnum"><div class="dot"><span>3</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='가상 환경 만들기 &amp; 활성화 (복습)'>Create &amp; activate the virtual environment (review)</h2>
+        <p class="i18n" data-ko='2주차와 같은 명령입니다. 프로젝트 폴더 안에서 실행하세요:'>Same command as Week 2. Run it inside the project folder:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템 · .venv 폴더 생성'>all systems · creates a .venv folder</span><button class="copy">copy</button></div>
+          <pre><code>uv venv</code></pre>
+        </div>
+        <p class="i18n" data-ko='이제 <strong>활성화</strong>하세요:'>Now <strong>activate</strong> it:</p>
+        <div data-os="win-cmd" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · Command Prompt</span><button class="copy">copy</button></div>
+            <pre><code>.venv\Scripts\activate.bat</code></pre>
+          </div>
+        </div>
+        <div data-os="win-ps" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · PowerShell</span><button class="copy">copy</button></div>
+            <pre><code>.venv\Scripts\Activate.ps1</code></pre>
+          </div>
+        </div>
+        <div data-os="mac linux" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">macOS / Linux</span><button class="copy">copy</button></div>
+            <pre><code>source .venv/bin/activate</code></pre>
+          </div>
+        </div>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='알아두기'>Good to know</span>
+            <p class="i18n" data-ko='uv 프로젝트에서는 <code class="ic">uv add</code> 와 <code class="ic">uv run</code> 이 <code class="ic">.venv</code> 가 없으면 자동으로 만들어 줍니다. 여기서는 무슨 일이 일어나는지 보기 위해 직접 만들었습니다.'>In a uv project, <code class="ic">uv add</code> and <code class="ic">uv run</code> create <code class="ic">.venv</code> automatically if it is missing. We make it by hand here so you can see what happens.</p>
+          </div>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='프롬프트 앞에 <code class="ic">(facility-scan)</code> 이 표시됩니다.'>Your prompt now starts with <code class="ic">(facility-scan)</code>.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s3"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 4 : UV ADD -->
+    <section class="step" id="s4">
+      <div class="stepnum"><div class="dot"><span>4</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='uv add로 라이브러리 추가하기'>Add libraries with uv add</h2>
+        <p class="i18n" data-ko='오늘 사용할 라이브러리 네 개를 추가합니다:'>Add the four libraries we use today:</p>
+        <div class="tree">
+          <table>
+            <tr><td>numpy</td><td class="i18n" data-ko='숫자 배열 계산'>Number arrays and maths</td></tr>
+            <tr><td>pandas</td><td class="i18n" data-ko='CSV 같은 표 데이터 다루기'>Tables, such as CSV files</td></tr>
+            <tr><td>matplotlib</td><td class="i18n" data-ko='그래프와 지도 그리기'>Charts and maps</td></tr>
+            <tr><td>open3d</td><td class="i18n" data-ko='3D 점군(point cloud) 읽기와 보기'>Reading and viewing 3D point clouds</td></tr>
+          </table>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템'>all systems</span><button class="copy">copy</button></div>
+          <pre><code>uv add numpy pandas matplotlib open3d</code></pre>
+        </div>
+        <p class="i18n" data-ko='<code class="ic">pyproject.toml</code> 을 다시 여세요. 라이브러리가 <code class="ic">dependencies</code> 에 기록되었습니다 (버전 번호는 다를 수 있습니다):'>Open <code class="ic">pyproject.toml</code> again. The libraries are now recorded under <code class="ic">dependencies</code> (your version numbers may differ):</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">pyproject.toml</span><button class="copy">copy</button></div>
+<pre><code>dependencies = [
+    "matplotlib&gt;=3.11.2",
+    "numpy&gt;=2.5.3",
+    "open3d&gt;=0.20.0",
+    "pandas&gt;=3.0.6",
+]</code></pre>
+        </div>
+        <p class="i18n" data-ko='새 파일 <code class="ic">uv.lock</code> 도 생겼습니다. 설치된 모든 패키지의 정확한 버전이 기록되어 있습니다.'>A new file, <code class="ic">uv.lock</code>, also appeared. It records the exact version of every package that was installed.</p>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='uv add vs. uv pip install'>uv add vs. uv pip install</span>
+            <p class="i18n" data-ko='2주차의 <code class="ic">uv pip install</code> 은 패키지를 설치만 하고 어디에도 기록하지 않습니다. <code class="ic">uv add</code> 는 설치하면서 <code class="ic">pyproject.toml</code> 과 <code class="ic">uv.lock</code> 에 기록합니다. 그래서 친구가 여러분의 프로젝트를 받아 <code class="ic">uv sync</code> 한 번만 실행하면 똑같은 환경이 만들어집니다. 라이브러리를 빼려면 <code class="ic">uv remove 이름</code> 을 사용하세요.'>Week 2's <code class="ic">uv pip install</code> only installs a package and records it nowhere. <code class="ic">uv add</code> installs it <strong>and</strong> writes it to <code class="ic">pyproject.toml</code> and <code class="ic">uv.lock</code>. So a classmate who gets your project runs <code class="ic">uv sync</code> once and has exactly the same environment. To take a library out, use <code class="ic">uv remove name</code>.</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <div class="ci">!</div>
+          <div><span class="ct i18n" data-ko='open3d 설치 전에 확인하세요'>Before you install open3d</span>
+            <p class="i18n" data-ko='<strong>다운로드 크기:</strong> Windows 약 80 MB, macOS 약 55 MB, Linux 약 400 MB. 와이파이가 느리면 시간이 걸립니다.'><strong>Download size:</strong> about 80 MB on Windows, 55 MB on macOS, 400 MB on Linux. It takes a while on slow Wi-Fi.</p>
+            <p class="i18n" data-ko='<strong>Linux:</strong> Ubuntu 22.04 이상이 필요합니다.'><strong>Linux:</strong> needs Ubuntu 22.04 or newer.</p>
+          </div>
+        </div>
+        <p class="i18n" data-ko='모두 불러와지는지 확인하세요:'>Check everything imports:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='동작 확인'>verify it works</span><button class="copy">copy</button></div>
+          <pre><code>python -c "import numpy, pandas, matplotlib, open3d; print('open3d', open3d.__version__)"</code></pre>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='<code class="ic">open3d 0.20.0</code> 처럼 버전이 출력되면 성공입니다. <code class="ic">ModuleNotFoundError</code> 가 나오면 <code class="ic">.venv</code> 가 활성화되어 있는지 확인하세요.'>A version such as <code class="ic">open3d 0.20.0</code> means success. If you get <code class="ic">ModuleNotFoundError</code>, check that <code class="ic">.venv</code> is activated.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s4"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 5 : DATA -->
+    <section class="step" id="s5">
+      <div class="stepnum"><div class="dot"><span>5</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='수업 데이터 받기'>Get the class data</h2>
+        <p class="i18n" data-ko='2026년 9월, 라이다와 카메라를 단 UGV가 건물 복도를 주행하며 공간 전체를 3D로 스캔했습니다. 이 데이터를 프로젝트 안의 <code class="ic">data</code> 폴더로 받습니다.'>In September 2026 our UGV, carrying a lidar and a camera, drove through a building corridor and scanned the whole space in 3D. Download that data into a <code class="ic">data</code> folder inside your project.</p>
+        <div class="fig-pair">
+          <figure>
+            <img src="assets/week04_site_photo.jpg" alt="Photo of the scanned corridor: terrazzo floor, shelving on the left, timber-slat wall panels on the right" loading="lazy">
+            <figcaption class="i18n" data-ko='스캔한 복도'>The corridor we scanned</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/week04_scan_preview.jpg" style="object-position:left center" alt="Screenshot of the colored 3D point cloud of the same corridor" loading="lazy">
+            <figcaption class="i18n" data-ko='로봇이 만든 3D 컬러 스캔'>The robot's 3D colored scan</figcaption>
+          </figure>
+        </div>
+        <p class="i18n" data-ko='<strong>프로젝트 폴더 안에서</strong> 실행하세요:'>Run this <strong>inside the project folder</strong>:</p>
+        <div data-os="win-cmd" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · Command Prompt</span><button class="copy">copy</button></div>
+<pre><code>curl -L -o class_data.zip https://mugojames254.github.io/smart_facility_coursework/class_data.zip
+tar -xf class_data.zip</code></pre>
+          </div>
+        </div>
+        <div data-os="win-ps" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · PowerShell</span><button class="copy">copy</button></div>
+<pre><code>curl.exe -L -o class_data.zip https://mugojames254.github.io/smart_facility_coursework/class_data.zip
+tar -xf class_data.zip</code></pre>
+          </div>
+          <p style="font-size:.9rem" class="i18n" data-ko='PowerShell에서는 <code class="ic">curl</code> 이 다른 명령의 별칭이므로 <code class="ic">curl.exe</code> 라고 써야 합니다.'>In PowerShell, <code class="ic">curl</code> is an alias for a different command, so type <code class="ic">curl.exe</code>.</p>
+        </div>
+        <div data-os="mac linux" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">macOS / Linux</span><button class="copy">copy</button></div>
+<pre><code>curl -L -o class_data.zip https://mugojames254.github.io/smart_facility_coursework/class_data.zip
+unzip class_data.zip</code></pre>
+          </div>
+        </div>
+        <p class="i18n" data-ko='명령이 안 되나요? 페이지 맨 위의 <strong>수업 데이터 내려받기</strong> 버튼을 누르고, zip 파일을 프로젝트 폴더에 풀어도 됩니다. 들어 있는 파일:'>Commands not working? Click <strong>Download class data</strong> at the top of this page and unzip the file into your project folder instead. What's inside:</p>
+        <div class="tree">
+          <table>
+            <tr><td>robot_trajectory.csv</td><td class="i18n" data-ko='10.5분, 64 m 주행 동안 약 0.1초마다 기록한 로봇 위치 (4,856행). 열: <code class="ic">t_s</code> (시작 후 초), <code class="ic">x_m</code>, <code class="ic">y_m</code>, <code class="ic">z_m</code> (미터), 방향 쿼터니언.'>Robot position about every 0.1 s over a 10.5 min, 64 m run (4,856 rows). Columns: <code class="ic">t_s</code> (seconds since start), <code class="ic">x_m</code>, <code class="ic">y_m</code>, <code class="ic">z_m</code> (metres), orientation quaternion.</td></tr>
+            <tr><td>lidar_map.ply</td><td class="i18n" data-ko='같은 주행에서 라이다로 만든 3D 지도 (52만 점). 궤적과 좌표계가 같습니다.'>3D map built by the lidar during the same run (520k points). Same coordinate frame as the trajectory.</td></tr>
+            <tr><td>facility_scan_color.ply</td><td class="i18n" data-ko='카메라 색상이 입혀진 3D 스캔 (66만 점).'>3D scan colored by the camera (660k points).</td></tr>
+            <tr><td>*.png · *.jpg</td><td class="i18n" data-ko='미리보기 이미지와 현장 사진.'>Preview images and a site photo.</td></tr>
+            <tr><td>README.md</td><td class="i18n" data-ko='데이터 설명서.'>Notes describing the data.</td></tr>
+          </table>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='VS Code 탐색기에서 <code class="ic">facility-scan/data/</code> 폴더 안에 <code class="ic">robot_trajectory.csv</code> 가 보여야 합니다. <code class="ic">data/data/</code> 처럼 두 번 겹쳐 있지 않은지 확인하세요.'>In the VS Code explorer you should see <code class="ic">robot_trajectory.csv</code> inside <code class="ic">facility-scan/data/</code>. Make sure it isn't nested twice, like <code class="ic">data/data/</code>.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s5"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 6 : FIRST LOOK -->
+    <section class="step" id="s6">
+      <div class="stepnum"><div class="dot"><span>6</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='첫 분석: 로봇은 어디를 다녀왔을까?'>First look: where did the robot go?</h2>
+        <p class="i18n" data-ko='시설 관리자라면 먼저 이렇게 묻습니다: 점검 경로는 얼마나 길었고, 얼마나 걸렸고, 건물의 어느 부분을 지나갔나? VS Code에서 새 파일 <code class="ic">first_look.py</code> 를 만들고 아래 코드를 붙여넣으세요:'>A facility manager's first questions: how long was the inspection route, how long did it take, and which parts of the building did it cover? In VS Code, create a new file <code class="ic">first_look.py</code> and paste this in:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">first_look.py</span><button class="copy">copy</button></div>
+<pre><code>import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import open3d as o3d
+
+<span class="cmt"># 1. The robot's route</span>
+traj = pd.read_csv("data/robot_trajectory.csv")
+step = np.hypot(traj["x_m"].diff(), traj["y_m"].diff())
+distance = step.sum()
+duration = traj["t_s"].iloc[-1]
+print(f"Poses recorded : {len(traj)}")
+print(f"Duration       : {duration / 60:.1f} min")
+print(f"Distance       : {distance:.1f} m")
+print(f"Average speed  : {distance / duration:.2f} m/s")
+
+<span class="cmt"># 2. The 3D scans</span>
+lidar = o3d.io.read_point_cloud("data/lidar_map.ply")
+photo = o3d.io.read_point_cloud("data/facility_scan_color.ply")
+print(f"Lidar map      : {len(lidar.points):,} points")
+print(f"Photo scan     : {len(photo.points):,} points")
+
+<span class="cmt"># 3. Top-down view: lidar map + robot path</span>
+pts = np.asarray(lidar.points)
+plt.figure(figsize=(8, 8))
+plt.scatter(pts[:, 0], pts[:, 1], s=0.2, c="lightgray")
+plt.plot(traj["x_m"], traj["y_m"], lw=1.5, label="robot path")
+plt.plot(traj["x_m"].iloc[0], traj["y_m"].iloc[0], "go", label="start")
+plt.axis("equal")
+plt.xlabel("x [m]")
+plt.ylabel("y [m]")
+plt.legend()
+plt.title("UGV inspection run — top view")
+plt.savefig("route_map.png", dpi=150)
+print("Saved route_map.png")
+plt.show()</code></pre>
+        </div>
+        <p class="i18n" data-ko='<code class="ic">.venv</code> 가 활성화된 상태에서 실행하세요:'>Run it with <code class="ic">.venv</code> activated:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='활성화된 .venv 안에서'>inside the active .venv</span><button class="copy">copy</button></div>
+          <pre><code>python first_look.py</code></pre>
+        </div>
+        <p class="i18n" data-ko='터미널 출력:'>Terminal output:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='예상 출력'>expected output</span><button class="copy">copy</button></div>
+<pre><code>Poses recorded : 4856
+Duration       : 10.5 min
+Distance       : 64.0 m
+Average speed  : 0.10 m/s
+Lidar map      : 520,558 points
+Photo scan     : 660,034 points
+Saved route_map.png</code></pre>
+        </div>
+        <figure>
+          <img src="assets/week04_route_map.png" alt="Top-down plot: gray lidar map of a long diagonal corridor with a side room; blue robot path starts in the side room, goes into the corridor and drives up and down it" loading="lazy">
+          <figcaption class="i18n" data-ko='<code class="ic">route_map.png</code> — 회색은 라이다 지도(벽과 바닥), 파란 선은 로봇 경로, 초록 점은 출발점입니다.'><code class="ic">route_map.png</code> — gray is the lidar map (walls and floor), blue is the robot's path, green is the start.</figcaption>
+        </figure>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='활성화 없이 실행하기'>Run without activating</span>
+            <p class="i18n" data-ko='<code class="ic">uv run first_look.py</code> 도 같은 결과를 냅니다. <code class="ic">uv run</code> 은 활성화하지 않아도 항상 프로젝트의 <code class="ic">.venv</code> 를 사용합니다.'><code class="ic">uv run first_look.py</code> gives the same result. <code class="ic">uv run</code> always uses the project's <code class="ic">.venv</code>, even when it is not activated.</p>
+          </div>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <p class="i18n" data-ko='로봇의 <strong>최고 속도</strong> 는 얼마였을까요? 힌트: <code class="ic">step / traj[&quot;t_s&quot;].diff()</code> 의 최댓값.'>What was the robot's <strong>top speed</strong>? Hint: the maximum of <code class="ic">step / traj["t_s"].diff()</code>.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s6"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 7 : 3D VIEW -->
+    <section class="step" id="s7">
+      <div class="stepnum"><div class="dot"><span>7</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='건물을 3D로 둘러보기'>Walk around the building in 3D</h2>
+        <p class="i18n" data-ko='새 파일 <code class="ic">view_scan.py</code> 를 만드세요:'>Create a new file <code class="ic">view_scan.py</code>:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">view_scan.py</span><button class="copy">copy</button></div>
+<pre><code>import open3d as o3d
+
+pcd = o3d.io.read_point_cloud("data/facility_scan_color.ply")
+print(pcd)
+o3d.visualization.draw_geometries([pcd], window_name="Facility scan")</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='활성화된 .venv 안에서'>inside the active .venv</span><button class="copy">copy</button></div>
+          <pre><code>python view_scan.py</code></pre>
+        </div>
+        <p class="i18n" data-ko='3D 창이 열립니다. <strong>마우스 드래그</strong> 로 회전, <strong>스크롤</strong> 로 확대/축소, <strong>+ / -</strong> 로 점 크기 조절, <strong>H</strong> 로 도움말을 볼 수 있습니다. 창을 닫으면 스크립트가 끝납니다.'>A 3D window opens. <strong>Drag</strong> to rotate, <strong>scroll</strong> to zoom, <strong>+ / -</strong> to change point size, <strong>H</strong> for help. Close the window to end the script.</p>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <p class="i18n" data-ko='파일 이름을 <code class="ic">data/lidar_map.ply</code> 로 바꿔 라이다 지도도 열어 보세요. 현장 사진 속 선반, 벽면 패널, 복도 끝의 계단을 찾을 수 있나요?'>Change the file name to <code class="ic">data/lidar_map.ply</code> and open the lidar map too. Can you find the shelving, the wall panels and the stairs at the end of the corridor from the site photo?</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s7"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- CHEAT SHEET -->
+  <section class="cheat">
+    <h2 class="i18n" data-ko='한 화면 요약 (치트 시트)'>One-screen cheat sheet</h2>
+    <p class="i18n" data-ko='위 내용을 순서대로 정리했습니다 — 흐름을 익힌 뒤 참고용으로 쓰세요.'>Everything above, in order — for reference once you know the flow.</p>
+    <div class="code">
+      <div class="code-head"><span class="code-tag" id="cheatTag">Windows · cmd</span><button class="copy">copy</button></div>
+      <pre><code id="cheatCode"></code></pre>
+    </div>
+  </section>
+
+  <footer>
+    <span class="i18n" data-ko='스마트 시설 관리 · 4주차 실습 · 데이터: 수업용 UGV (라이다 + ZED X 카메라) · 관리 도구'>Smart Facility Management · Week 4 practical · data: course UGV (lidar + ZED X camera) · manager</span>
+    <a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener">uv</a> ·
+    <a href="https://www.open3d.org" target="_blank" rel="noopener">Open3D</a> ·
+    <a href="index.html" class="i18n" data-ko='2주차 설치 가이드'>Week 2 setup guide</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var KEY_OS="setup.os", KEY_DONE="week04.done", KEY_THEME="setup.theme", KEY_LANG="setup.lang";
+  var DATA_URL="https://mugojames254.github.io/smart_facility_coursework/class_data.zip";
+  var lang="en";
+
+  /* ---- language strings driven by JS ---- */
+  var STR={
+    copy:      { en:"copy",           ko:"복사" },
+    copied:    { en:"copied ✓",       ko:"복사됨 ✓" },
+    markDone:  { en:" Mark step done", ko:" 완료 표시" },
+    stepDone:  { en:" Step complete",  ko:" 완료됨" },
+    langBtn:   { en:"한국어",          ko:"EN" }
+  };
+  var CHEAT_CMT={
+    en:["# 1 · create the project",
+        "# 2 · try the sample script",
+        "# 3 · create + activate the virtual environment",
+        "# 4 · add libraries",
+        "# 5 · download + unzip the class data",
+        "# 6-7 · run the scripts from steps 6 and 7"],
+    ko:["# 1 · 프로젝트 만들기",
+        "# 2 · 예제 스크립트 실행",
+        "# 3 · 가상 환경 생성 + 활성화",
+        "# 4 · 라이브러리 추가",
+        "# 5 · 수업 데이터 내려받기 + 압축 풀기",
+        "# 6-7 · 6, 7단계 스크립트 실행"]
+  };
+
+  /* ---- i18n: capture English HTML, swap on demand ---- */
+  var i18nEls=document.querySelectorAll(".i18n");
+  i18nEls.forEach(function(el){ el._en=el.innerHTML; });
+  function applyLang(l){
+    lang=(l==="ko")?"ko":"en";
+    document.documentElement.setAttribute("lang",lang);
+    i18nEls.forEach(function(el){
+      var ko=el.getAttribute("data-ko");
+      el.innerHTML=(lang==="ko"&&ko!=null)?ko:el._en;
+    });
+    document.querySelectorAll(".copy").forEach(function(b){
+      if(!b.classList.contains("copied")) b.textContent=STR.copy[lang];
+    });
+    document.getElementById("langBtn").textContent=STR.langBtn[lang];
+    renderCheat(currentOS);
+    refresh();
+    try{ localStorage.setItem(KEY_LANG, lang); }catch(e){}
+  }
+
+  /* ---- OS switching ---- */
+  var currentOS="win-cmd";
+  var buttons=document.querySelectorAll(".seg button");
+  function applyOS(os){
+    currentOS=os;
+    document.querySelectorAll("[data-os]").forEach(function(el){
+      var list=el.getAttribute("data-os").split(/\s+/);
+      el.classList.toggle("os-on", list.indexOf(os)!==-1);
+    });
+    buttons.forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.set===os?"true":"false"); });
+    renderCheat(os);
+    try{ localStorage.setItem(KEY_OS, os); }catch(e){}
+  }
+  buttons.forEach(function(b){ b.addEventListener("click", function(){ applyOS(b.dataset.set); }); });
+
+  /* ---- cheat sheet (per-OS, per-lang) ---- */
+  function cheatFor(os){
+    var activate = {
+      "win-cmd":".venv\\Scripts\\activate.bat",
+      "win-ps":".venv\\Scripts\\Activate.ps1",
+      "mac":"source .venv/bin/activate",
+      "linux":"source .venv/bin/activate"
+    }[os];
+    var curl = (os==="win-ps") ? "curl.exe" : "curl";
+    var unzip = (os==="mac"||os==="linux") ? "unzip class_data.zip" : "tar -xf class_data.zip";
+    var c=CHEAT_CMT[lang], L=[];
+    L.push("<span class='cmt'>"+c[0]+"</span>");
+    L.push("uv init facility-scan --python 3.12");
+    L.push("cd facility-scan");
+    L.push("<span class='cmt'>"+c[1]+"</span>");
+    L.push("uv run main.py");
+    L.push("<span class='cmt'>"+c[2]+"</span>");
+    L.push("uv venv");
+    L.push(activate);
+    L.push("<span class='cmt'>"+c[3]+"</span>");
+    L.push("uv add numpy pandas matplotlib open3d");
+    L.push("<span class='cmt'>"+c[4]+"</span>");
+    L.push(curl+" -L -o class_data.zip "+DATA_URL);
+    L.push(unzip);
+    L.push("<span class='cmt'>"+c[5]+"</span>");
+    L.push("python first_look.py");
+    L.push("python view_scan.py");
+    return L.join("\n");
+  }
+  var tagText={ "win-cmd":"Windows · cmd","win-ps":"Windows · PowerShell","mac":"macOS","linux":"Linux" };
+  function renderCheat(os){
+    document.getElementById("cheatCode").innerHTML=cheatFor(os);
+    document.getElementById("cheatTag").textContent=tagText[os];
+  }
+
+  /* ---- copy buttons ---- */
+  document.addEventListener("click", function(e){
+    var btn=e.target.closest(".copy"); if(!btn) return;
+    var code=btn.closest(".code").querySelector("pre code");
+    var text=code.innerText;
+    function ok(){ btn.classList.add("copied"); var o=STR.copy[lang]; btn.textContent=STR.copied[lang];
+      setTimeout(function(){ btn.classList.remove("copied"); btn.textContent=o; },1400); }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(ok,ok); }
+    else { try{ var t=document.createElement("textarea"); t.value=text; document.body.appendChild(t);
+      t.select(); document.execCommand("copy"); document.body.removeChild(t); ok(); }catch(e){} }
+  });
+
+  /* ---- done tracking + progress ---- */
+  var steps=["s1","s2","s3","s4","s5","s6","s7"], done={};
+  try{ done=JSON.parse(localStorage.getItem(KEY_DONE))||{}; }catch(e){ done={}; }
+  function saveDone(){ try{ localStorage.setItem(KEY_DONE, JSON.stringify(done)); }catch(e){} }
+  function refresh(){
+    var n=0;
+    steps.forEach(function(id){
+      var el=document.getElementById(id);
+      if(done[id]){ el.classList.add("done"); n++; } else { el.classList.remove("done"); }
+      var b=el.querySelector(".done-btn .box");
+      if(b) b.textContent = done[id] ? "✓" : "";
+      var lbl=el.querySelector(".done-btn .done-label");
+      if(lbl) lbl.textContent = done[id] ? STR.stepDone[lang] : STR.markDone[lang];
+    });
+    document.getElementById("pfill").style.width=(n/steps.length*100)+"%";
+  }
+  document.querySelectorAll(".done-btn").forEach(function(b){
+    b.addEventListener("click", function(){ var id=b.dataset.done; done[id]=!done[id]; saveDone(); refresh(); });
+  });
+
+  /* ---- theme toggle ---- */
+  var root=document.documentElement, tb=document.getElementById("themeBtn");
+  try{ var st=localStorage.getItem(KEY_THEME); if(st) root.setAttribute("data-theme",st); }catch(e){}
+  tb.addEventListener("click", function(){
+    var cur=root.getAttribute("data-theme");
+    var mqDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
+    var next = cur ? (cur==="dark"?"light":"dark") : (mqDark?"light":"dark");
+    root.setAttribute("data-theme",next);
+    try{ localStorage.setItem(KEY_THEME,next); }catch(e){}
+  });
+
+  /* ---- language toggle ---- */
+  document.getElementById("langBtn").addEventListener("click", function(){
+    applyLang(lang==="ko"?"en":"ko");
+  });
+
+  /* ---- init ---- */
+  var savedOS="win-cmd";
+  try{ savedOS=localStorage.getItem(KEY_OS)||"win-cmd"; }catch(e){}
+  var savedLang="en";
+  try{ savedLang=localStorage.getItem(KEY_LANG)||"en"; }catch(e){}
+  applyOS(savedOS);
+  applyLang(savedLang);
+})();
+</script>
+</body>
+</html>

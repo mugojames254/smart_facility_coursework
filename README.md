@@ -11,3 +11,6 @@ https://mugojames254.github.io/smart_facility_coursework
 - `index.html` — course landing page
 - `setup_guide.md` — environment setup instructions (Git, PyTorch, etc.)
 - `smart_facility_setup.pptx` — class program installation slides
+- `week04.html` — Week 4 practical: uv project workflow + exploring UGV scan data
+- `class_data.zip` — UGV scan dataset (trajectory CSV, lidar map, colored scan) zipped as `data/`, downloaded by students in Week 4; see `data/README.md` inside
+- `assets/` — images used by the course pages
