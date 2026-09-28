@@ -592,26 +592,88 @@ Saved route_map.png</code></pre>
       <div class="stepnum"><div class="dot"><span>7</span></div></div>
       <div class="step-body">
         <h2 class="i18n" data-ko='건물을 3D로 둘러보기'>Walk around the building in 3D</h2>
-        <p class="i18n" data-ko='새 파일 <code class="ic">view_scan.py</code> 를 만드세요:'>Create a new file <code class="ic">view_scan.py</code>:</p>
+        <p class="i18n" data-ko='이번에는 색이 입혀진 스캔을 3D 창으로 열어, 로봇이 본 복도를 직접 돌려 봅니다. 새 파일 <code class="ic">view_scan.py</code> 를 만들고 아래 코드를 붙여넣으세요:'>Now open the colour scan in a 3D window and turn the corridor around yourself, the way the robot saw it. Create a new file <code class="ic">view_scan.py</code> and paste this in:</p>
         <div class="code">
           <div class="code-head"><span class="code-tag">view_scan.py</span><button class="copy">copy</button></div>
 <pre><code>import open3d as o3d
 
+<span class="cmt"># 1. Load the colour scan (a .ply point cloud file)</span>
 pcd = o3d.io.read_point_cloud("data/facility_scan_color.ply")
+
+<span class="cmt"># 2. Print a one-line summary: how many points it has</span>
 print(pcd)
+
+<span class="cmt"># 3. Open an interactive 3D window (close it to end the script)</span>
 o3d.visualization.draw_geometries([pcd], window_name="Facility scan")</code></pre>
         </div>
         <div class="code">
           <div class="code-head"><span class="code-tag i18n" data-ko='활성화된 .venv 안에서'>inside the active .venv</span><button class="copy">copy</button></div>
           <pre><code>python view_scan.py</code></pre>
         </div>
-        <p class="i18n" data-ko='3D 창이 열립니다. <strong>마우스 드래그</strong> 로 회전, <strong>스크롤</strong> 로 확대/축소, <strong>+ / -</strong> 로 점 크기 조절, <strong>H</strong> 로 도움말을 볼 수 있습니다. 창을 닫으면 스크립트가 끝납니다.'>A 3D window opens. <strong>Drag</strong> to rotate, <strong>scroll</strong> to zoom, <strong>+ / -</strong> to change point size, <strong>H</strong> for help. Close the window to end the script.</p>
-        <div class="callout verify">
-          <div class="ci">✓</div>
-          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
-            <p class="i18n" data-ko='파일 이름을 <code class="ic">data/lidar_map.ply</code> 로 바꿔 라이다 지도도 열어 보세요. 현장 사진 속 선반, 벽면 패널, 복도 끝의 계단을 찾을 수 있나요?'>Change the file name to <code class="ic">data/lidar_map.ply</code> and open the lidar map too. Can you find the shelving, the wall panels and the stairs at the end of the corridor from the site photo?</p>
+        <p class="i18n" data-ko='터미널 출력:'>Terminal output:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='예상 출력'>expected output</span><button class="copy">copy</button></div>
+          <pre><code>PointCloud with 660034 points.</code></pre>
+        </div>
+        <p class="i18n" data-ko='그리고 3D 창이 열립니다. 처음에는 <strong>위에서 내려다본 모습</strong> 이라 평평해 보입니다 — 마우스로 드래그해서 기울이면 벽과 복도가 입체로 보입니다.'>Then a 3D window opens. It starts looking <strong>straight down from above</strong>, so it looks flat at first — drag with the mouse to tilt it and the walls and corridors appear in 3D.</p>
+        <div class="fig-pair">
+          <figure>
+            <img src="assets/week04_view_default.jpg" alt="Open3D window when it first opens: the colour scan seen from directly above, a long vertical corridor with a side corridor" loading="lazy">
+            <figcaption class="i18n" data-ko='창이 처음 열렸을 때: 위에서 본 모습'>When the window opens: seen from above</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/week04_view_rotated.jpg" alt="The same scan after dragging: an angled 3D view showing corridor walls, doors and the floor" loading="lazy">
+            <figcaption class="i18n" data-ko='드래그해서 기울인 뒤: 벽과 문이 보입니다'>After dragging to tilt it: walls and doors appear</figcaption>
+          </figure>
+        </div>
+        <div class="tree">
+          <table>
+            <tr><td class="i18n" data-ko='왼쪽 버튼 드래그'>Left-drag</td><td class="i18n" data-ko='회전'>Rotate</td></tr>
+            <tr><td class="i18n" data-ko='스크롤 휠'>Scroll wheel</td><td class="i18n" data-ko='확대 / 축소'>Zoom in / out</td></tr>
+            <tr><td class="i18n" data-ko='Ctrl + 드래그'>Ctrl + drag</td><td class="i18n" data-ko='화면 이동 (팬)'>Move sideways (pan)</td></tr>
+            <tr><td>+ / −</td><td class="i18n" data-ko='점 크기 크게 / 작게 — 점 하나하나를 보려면 확대한 뒤 − 를 누르세요'>Bigger / smaller points — zoom in and press − to see individual points</td></tr>
+            <tr><td>R</td><td class="i18n" data-ko='처음 시점으로 되돌리기'>Reset the view</td></tr>
+            <tr><td>H</td><td class="i18n" data-ko='모든 단축키 도움말 (터미널에 출력)'>Print all shortcuts (in the terminal)</td></tr>
+          </table>
+        </div>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='창이 안 보이나요?'>No window?</span>
+            <p class="i18n" data-ko='창은 노트북 화면에 열려야 합니다. 원격 서버(SSH)에서는 열리지 않습니다. 스크립트가 끝나지 않고 멈춰 있다면 다른 창 뒤에 숨어 있을 수 있으니 작업 표시줄을 확인하세요.'>The window has to open on your own laptop screen — it can't open over a remote (SSH) connection. If the script seems stuck and never finishes, the window is probably hidden behind another one; check your taskbar or dock.</p>
           </div>
         </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기 ① — 라이다 지도 열기'>Try it yourself ① — open the lidar map</span>
+            <p class="i18n" data-ko='파일 이름을 <code class="ic">data/lidar_map.ply</code> 로 바꿔 라이다 지도도 열어 보세요. 색상 스캔과 무엇이 다른가요? 현장 사진 속 선반, 벽면 패널, 복도 끝의 계단을 찾을 수 있나요?'>Change the file name to <code class="ic">data/lidar_map.ply</code> and open the lidar map too. How does it differ from the colour scan? Can you find the shelving, the wall panels and the stairs at the end of the corridor from the site photo?</p>
+          </div>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기 ② — 높이로 색칠하기'>Try it yourself ② — colour by height</span>
+            <p class="i18n" data-ko='점의 위치는 그대로 두고 색을 칠하는 규칙만 바꿔 봅니다. 새 파일 <code class="ic">view_height.py</code> 를 만드세요 — 파랑 = 낮음, 빨강 = 높음:'>Keep every point where it is and change only the colouring rule. Create <code class="ic">view_height.py</code> — blue = low, red = high:</p>
+          </div>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">view_height.py</span><button class="copy">copy</button></div>
+<pre><code>import numpy as np
+import matplotlib.pyplot as plt
+import open3d as o3d
+
+pcd = o3d.io.read_point_cloud("data/facility_scan_color.ply")
+
+<span class="cmt"># colour every point by its height (z): blue = low, red = high</span>
+z = np.asarray(pcd.points)[:, 2]
+low, high = np.percentile(z, [1, 99])          <span class="cmt"># ignore a few stray points</span>
+z01 = np.clip((z - low) / (high - low), 0, 1)
+pcd.colors = o3d.utility.Vector3dVector(plt.cm.turbo(z01)[:, :3])
+
+o3d.visualization.draw_geometries([pcd], window_name="Facility scan — coloured by height")</code></pre>
+        </div>
+        <figure style="max-width:560px">
+          <img src="assets/week04_view_height.jpg" alt="The colour scan recoloured by height: floor in blue and green, upper surfaces in orange and dark red" loading="lazy">
+          <figcaption class="i18n" data-ko='<code class="ic">python view_height.py</code> 를 실행하고 기울여 본 모습 — 바닥은 파랑·초록, 높은 곳은 주황·빨강.'><code class="ic">python view_height.py</code>, tilted by dragging — floor in blue/green, high surfaces in orange/red.</figcaption>
+        </figure>
         <div class="done-row"><button class="done-btn" data-done="s7"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
       </div>
     </section>
@@ -726,6 +788,7 @@ o3d.visualization.draw_geometries([pcd], window_name="Facility scan")</code></pr
     L.push("<span class='cmt'>"+c[5]+"</span>");
     L.push("python first_look.py");
     L.push("python view_scan.py");
+    L.push("python view_height.py");
     return L.join("\n");
   }
   var tagText={ "win-cmd":"Windows · cmd","win-ps":"Windows · PowerShell","mac":"macOS","linux":"Linux" };
