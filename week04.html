@@ -682,34 +682,6 @@ o3d.visualization.draw_geometries([pcd], window_name="Facility scan — coloured
             <p class="i18n" data-ko='이 복도의 벽 하나는 설계에 적힌 위치에 지어지지 않았습니다. 어느 벽일까요?'>One wall in this corridor was not built where the design says. Find it.</p>
           </div>
         </div>
-        <div class="callout tip">
-          <div class="ci">i</div>
-          <div><span class="ct i18n" data-ko='힌트'>Hints</span>
-            <p class="i18n" data-ko='IFC 벽을 Open3D 3D 도형(메시)으로 바꾸는 부분은 아래 코드를 그대로 사용하세요. <code class="ic">shape</code> 변수를 꼭 따로 두세요 — 한 줄로 줄이면 좌표가 깨집니다.'>Use the code below as is to turn an IFC wall into an Open3D 3D shape (mesh). Keep the <code class="ic">shape</code> variable on its own line — squeezing it into one line breaks the coordinates.</p>
-            <p class="i18n" data-ko='점에서 메시까지의 거리: <code class="ic">o3d.t.geometry.RaycastingScene</code> 의 <code class="ic">compute_distance</code>. 벽 색칠: <code class="ic">mesh.paint_uniform_color([r, g, b])</code>.'>Distance from points to a mesh: <code class="ic">compute_distance</code> of <code class="ic">o3d.t.geometry.RaycastingScene</code>. Colour a wall: <code class="ic">mesh.paint_uniform_color([r, g, b])</code>.</p>
-            <p class="i18n" data-ko='스캔에는 선반, 물건, 노이즈도 들어 있어 평균 거리는 모든 벽에서 커집니다. 대신 <strong>가장 많은 점이 모여 있는 거리</strong>를 차이로 쓰세요 (<code class="ic">np.histogram</code> + <code class="ic">np.argmax</code>, 2 cm 간격).'>The scan also contains shelves, objects and noise, so the average distance is large for every wall. Use the <strong>distance where most points are</strong> as the gap instead (<code class="ic">np.histogram</code> + <code class="ic">np.argmax</code>, 2 cm steps).</p>
-          </div>
-        </div>
-        <div class="code">
-          <div class="code-head"><span class="code-tag i18n" data-ko='시작 코드'>starter code</span><button class="copy">copy</button></div>
-<pre><code>import numpy as np
-import open3d as o3d
-import ifcopenshell
-import ifcopenshell.geom
-
-model = ifcopenshell.open("data/design.ifc")
-settings = ifcopenshell.geom.settings()
-settings.set("use-world-coords", True)   <span class="cmt"># same coordinates as the scan</span>
-
-for wall in model.by_type("IfcWall"):
-    <span class="cmt"># turn one IFC wall into an Open3D mesh (copy as is)</span>
-    shape = ifcopenshell.geom.create_shape(settings, wall)
-    verts = np.array(shape.geometry.verts).reshape(-1, 3)
-    faces = np.array(shape.geometry.faces).reshape(-1, 3)
-    mesh = o3d.geometry.TriangleMesh(o3d.utility.Vector3dVector(verts),
-                                     o3d.utility.Vector3iVector(faces))
-    print(wall.Name)</code></pre>
-        </div>
         <p class="i18n" data-ko='<strong>제출물:</strong>'><strong>Hand in:</strong></p>
         <ol>
           <li><code class="ic">check_bim.py</code></li>
