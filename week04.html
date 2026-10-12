@@ -556,21 +556,6 @@ plt.show()</code></pre>
           <div class="code-head"><span class="code-tag i18n" data-ko='활성화된 .venv 안에서'>inside the active .venv</span><button class="copy">copy</button></div>
           <pre><code>python first_look.py</code></pre>
         </div>
-        <p class="i18n" data-ko='터미널 출력:'>Terminal output:</p>
-        <div class="code">
-          <div class="code-head"><span class="code-tag i18n" data-ko='예상 출력'>expected output</span><button class="copy">copy</button></div>
-<pre><code>Poses recorded : 4856
-Duration       : 10.5 min
-Distance       : 64.0 m
-Average speed  : 0.10 m/s
-Lidar map      : 520,558 points
-Photo scan     : 660,034 points
-Saved route_map.png</code></pre>
-        </div>
-        <figure>
-          <img src="assets/week04_route_map.png" alt="Top-down plot: gray lidar map of a long diagonal corridor with a side room; blue robot path starts in the side room, goes into the corridor and drives up and down it" loading="lazy">
-          <figcaption class="i18n" data-ko='<code class="ic">route_map.png</code> — 회색은 라이다 지도(벽과 바닥), 파란 선은 로봇 경로, 초록 점은 출발점입니다.'><code class="ic">route_map.png</code> — gray is the lidar map (walls and floor), blue is the robot's path, green is the start.</figcaption>
-        </figure>
         <div class="callout tip">
           <div class="ci">i</div>
           <div><span class="ct i18n" data-ko='활성화 없이 실행하기'>Run without activating</span>
@@ -610,22 +595,7 @@ o3d.visualization.draw_geometries([pcd], window_name="Facility scan")</code></pr
           <div class="code-head"><span class="code-tag i18n" data-ko='활성화된 .venv 안에서'>inside the active .venv</span><button class="copy">copy</button></div>
           <pre><code>python view_scan.py</code></pre>
         </div>
-        <p class="i18n" data-ko='터미널 출력:'>Terminal output:</p>
-        <div class="code">
-          <div class="code-head"><span class="code-tag i18n" data-ko='예상 출력'>expected output</span><button class="copy">copy</button></div>
-          <pre><code>PointCloud with 660034 points.</code></pre>
-        </div>
-        <p class="i18n" data-ko='그리고 3D 창이 열립니다. 처음에는 <strong>위에서 내려다본 모습</strong> 이라 평평해 보입니다 — 마우스로 드래그해서 기울이면 벽과 복도가 입체로 보입니다.'>Then a 3D window opens. It starts looking <strong>straight down from above</strong>, so it looks flat at first — drag with the mouse to tilt it and the walls and corridors appear in 3D.</p>
-        <div class="fig-pair">
-          <figure>
-            <img src="assets/week04_view_default.jpg" alt="Open3D window when it first opens: the colour scan seen from directly above, a long vertical corridor with a side corridor" loading="lazy">
-            <figcaption class="i18n" data-ko='창이 처음 열렸을 때: 위에서 본 모습'>When the window opens: seen from above</figcaption>
-          </figure>
-          <figure>
-            <img src="assets/week04_view_rotated.jpg" alt="The same scan after dragging: an angled 3D view showing corridor walls, doors and the floor" loading="lazy">
-            <figcaption class="i18n" data-ko='드래그해서 기울인 뒤: 벽과 문이 보입니다'>After dragging to tilt it: walls and doors appear</figcaption>
-          </figure>
-        </div>
+        <p class="i18n" data-ko='3D 창이 열립니다. 처음에는 <strong>위에서 내려다본 모습</strong> 이라 평평해 보입니다 — 마우스로 드래그해서 기울이면 벽과 복도가 입체로 보입니다.'>A 3D window opens. It starts looking <strong>straight down from above</strong>, so it looks flat at first — drag with the mouse to tilt it and the walls and corridors appear in 3D.</p>
         <div class="tree">
           <table>
             <tr><td class="i18n" data-ko='왼쪽 버튼 드래그'>Left-drag</td><td class="i18n" data-ko='회전'>Rotate</td></tr>
@@ -670,10 +640,6 @@ pcd.colors = o3d.utility.Vector3dVector(plt.cm.turbo(z01)[:, :3])
 
 o3d.visualization.draw_geometries([pcd], window_name="Facility scan — coloured by height")</code></pre>
         </div>
-        <figure style="max-width:560px">
-          <img src="assets/week04_view_height.jpg" alt="The colour scan recoloured by height: floor in blue and green, upper surfaces in orange and dark red" loading="lazy">
-          <figcaption class="i18n" data-ko='<code class="ic">python view_height.py</code> 를 실행하고 기울여 본 모습 — 바닥은 파랑·초록, 높은 곳은 주황·빨강.'><code class="ic">python view_height.py</code>, tilted by dragging — floor in blue/green, high surfaces in orange/red.</figcaption>
-        </figure>
         <div class="done-row"><button class="done-btn" data-done="s7"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
       </div>
     </section>
