@@ -229,6 +229,13 @@
   .fig-pair figure{margin:0}
   .fig-pair img{aspect-ratio:4/3;object-fit:cover}
   @media (max-width:620px){.fig-pair{grid-template-columns:1fr}}
+  /* course navigation */
+  .course-nav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 18px;margin:0 0 26px;
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px}
+  .course-nav a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid transparent}
+  .course-nav a:hover{border-bottom-color:var(--accent)}
+  .course-nav .pn{display:flex;flex-wrap:wrap;gap:8px 18px}
+  html[lang="ko"] .course-nav{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
 </style>
 </head>
 <body>
@@ -236,6 +243,12 @@
 
 <div class="wrap">
   <header>
+    <nav class="course-nav" aria-label="Course navigation">
+      <a href="index.html" class="i18n" data-ko='← 강의 홈 (전체 목차)'>← Course home (all classes)</a>
+      <span class="pn">
+      <a href="week04.html" class="i18n" data-ko='‹ 4주차: 포인트 클라우드'>‹ Week 4: Point clouds</a>
+      </span>
+    </nav>
     <p class="eyebrow i18n" data-ko='스마트 시설 관리 - 실습 세션 · 5주차'>Smart Facility Management - Practical Session · Week 05 . (For any queries please feel free to reachout: mugojames254@skku.edu)</p>
     <h1 class="i18n" data-ko='메시: 점에서 면으로, 그리고 건물 측정하기'>Meshes: From Points to Surfaces, Then Measure the Building</h1>
     <p class="lede i18n" data-ko='4주차에는 복도를 수십만 개의 <strong>점</strong> 으로 보았습니다. 이번 주에는 그 점들을 이어 <strong>삼각형 면(메시)</strong> 을 만들고, 세 가지 재구성 방법을 비교한 뒤, 메시로 시설 관리자가 실제로 묻는 질문에 답합니다: 바닥은 몇 m² 인가? 페인트는 몇 리터 필요한가? 복도는 충분히 넓은가?'>In Week 4 we saw the corridor as hundreds of thousands of <strong>points</strong>. This week we join those points into <strong>triangles (a mesh)</strong>, compare three ways of doing it, and then use the mesh to answer questions a facility manager actually asks: how many m² of floor? How many litres of paint? Is the corridor wide enough?</p>
@@ -962,7 +975,7 @@ Ball pivoting   ??.? (-?%)       ??.? (-??%)      ?.?? (+?%)</code></pre>
     <span class="i18n" data-ko='스마트 시설 관리 · 5주차 실습 · 데이터: 수업용 UGV (라이다 + ZED X 카메라) · 관리 도구'>Smart Facility Management · Week 5 practical · data: course UGV (lidar + ZED X camera) · manager</span>
     <a href="https://www.open3d.org/docs/release/tutorial/geometry/surface_reconstruction.html" target="_blank" rel="noopener" class="i18n" data-ko='Open3D 표면 재구성'>Open3D surface reconstruction</a> ·
     <a href="week04.html" class="i18n" data-ko='4주차 포인트 클라우드'>Week 4 point clouds</a> ·
-    <a href="index.html" class="i18n" data-ko='2주차 설치 가이드'>Week 2 setup guide</a>
+    <a href="setup.html" class="i18n" data-ko='2주차 설치 가이드'>Week 2 setup guide</a>
   </footer>
 </div>
 

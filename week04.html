@@ -228,6 +228,13 @@
   .fig-pair figure{margin:0}
   .fig-pair img{aspect-ratio:4/3;object-fit:cover}
   @media (max-width:620px){.fig-pair{grid-template-columns:1fr}}
+  /* course navigation */
+  .course-nav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 18px;margin:0 0 26px;
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px}
+  .course-nav a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid transparent}
+  .course-nav a:hover{border-bottom-color:var(--accent)}
+  .course-nav .pn{display:flex;flex-wrap:wrap;gap:8px 18px}
+  html[lang="ko"] .course-nav{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
 </style>
 </head>
 <body>
@@ -235,6 +242,13 @@
 
 <div class="wrap">
   <header>
+    <nav class="course-nav" aria-label="Course navigation">
+      <a href="index.html" class="i18n" data-ko='← 강의 홈 (전체 목차)'>← Course home (all classes)</a>
+      <span class="pn">
+      <a href="setup.html" class="i18n" data-ko='‹ 2주차: 설치'>‹ Week 2: Setup</a>
+      <a href="week05.html" class="i18n" data-ko='5주차: 메시 ›'>Week 5: Meshes ›</a>
+      </span>
+    </nav>
     <p class="eyebrow i18n" data-ko='스마트 시설 관리 - 실습 세션 · 4주차'>Smart Facility Management - Practical Session · Week 04 . (For any queries please feel free to reachout: mugojames254@skku.edu)</p>
     <h1 class="i18n" data-ko='포인트 클라우드 데이터: 로봇 시설 스캔 탐색하기'>Point Cloud Data: Exploring a Robot Facility Scan</h1>
     <p class="lede i18n" data-ko='<code class="ic">uv</code> 로 새 Python 프로젝트를 만들고, 필요한 라이브러리를 추가한 뒤, 무인 지상 차량(UGV)이 건물 복도를 주행하며 수집한 실제 데이터를 열어 봅니다. 위에서 아래로 순서대로 따라오세요.'>Create a new Python project with <code class="ic">uv</code>, add the libraries you need, then open real data that our unmanned ground vehicle (UGV) collected while driving through a building corridor. Follow along, top to bottom.</p>
@@ -254,7 +268,7 @@
         <span aria-hidden="true">⬇</span>
         <span class="i18n" data-ko='강의 슬라이드 내려받기 (.pptx)'>Download lecture slides (.pptx)</span>
       </a>
-      <a class="slides-btn ghost-btn" href="index.html">
+      <a class="slides-btn ghost-btn" href="setup.html">
         <span aria-hidden="true">←</span>
         <span class="i18n" data-ko='2주차: 설치 가이드'>Week 2: setup guide</span>
       </a>
@@ -707,7 +721,7 @@ o3d.visualization.draw_geometries([pcd], window_name="Facility scan — coloured
     <span class="i18n" data-ko='스마트 시설 관리 · 4주차 실습 · 데이터: 수업용 UGV (라이다 + ZED X 카메라) · 관리 도구'>Smart Facility Management · Week 4 practical · data: course UGV (lidar + ZED X camera) · manager</span>
     <a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener">uv</a> ·
     <a href="https://www.open3d.org" target="_blank" rel="noopener">Open3D</a> ·
-    <a href="index.html" class="i18n" data-ko='2주차 설치 가이드'>Week 2 setup guide</a>
+    <a href="setup.html" class="i18n" data-ko='2주차 설치 가이드'>Week 2 setup guide</a>
   </footer>
 </div>
 

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dev Setup Lab</title>
-<meta name="description" content="Follow-along install guide: VS Code, Git, uv, Python, virtual environments, Jupyter and PyTorch — for Windows, macOS and Linux.">
+<title>Facility Course Home</title>
+<meta name="description" content="Smart Facility Management practical sessions: table of contents for every class, with links to each practical, its slides and its data.">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap');
 
@@ -13,10 +13,7 @@
     --ink:#152220; --muted:#576560; --faint:#8a9793;
     --border:#d6dedc; --border-strong:#c2cccb;
     --accent:#0e7b7b; --accent-ink:#0a5c5c; --accent-wash:#e3f0ef;
-    --warn:#a85808; --warn-bg:#fbf1e4; --warn-border:#efd6b3;
     --ok:#137a48; --ok-bg:#e8f4ec; --ok-border:#bfe1cb;
-    --code-bg:#0e1a19; --code-surface:#152625; --code-ink:#d6e4e1;
-    --code-muted:#7f938f; --code-prompt:#3fb7ac; --code-border:#233634;
     --shadow:0 1px 2px rgba(20,40,38,.05),0 8px 24px -14px rgba(20,40,38,.22);
   }
   @media (prefers-color-scheme:dark){
@@ -25,10 +22,7 @@
       --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
       --border:#22302e; --border-strong:#2d3d3a;
       --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
-      --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
       --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
-      --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
-      --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
       --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
     }
   }
@@ -37,575 +31,184 @@
     --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
     --border:#22302e; --border-strong:#2d3d3a;
     --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
-    --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
     --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
-    --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
-    --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
   }
 
   *{box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   body{
     margin:0;background:var(--bg);color:var(--ink);
     font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
     font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
   }
-  html[lang="ko"] body{
-    font-family:"IBM Plex Sans","Noto Sans KR",ui-sans-serif,system-ui,sans-serif;
-  }
+  html[lang="ko"] body{font-family:"IBM Plex Sans","Noto Sans KR",ui-sans-serif,system-ui,sans-serif}
   .wrap{max-width:940px;margin:0 auto;padding:0 24px}
 
-  /* progress bar */
-  .progress-bar{position:sticky;top:0;z-index:40;height:4px;background:transparent}
-  .progress-fill{height:100%;width:0;background:var(--accent);transition:width .35s ease}
-
-  /* header */
-  header{padding:56px 0 30px}
-  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.18em;
-    text-transform:uppercase;color:var(--accent-ink);font-weight:600;margin:0 0 14px}
-  h1{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;
-    font-size:clamp(2.3rem,6vw,3.6rem);line-height:1.02;letter-spacing:-.02em;
-    margin:0 0 16px;text-wrap:balance}
-  .lede{font-size:1.12rem;color:var(--muted);max-width:60ch;margin:0}
-  .meta{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:22px;
-    font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--faint)}
-  .meta b{color:var(--muted);font-weight:600}
-  .slides-btn{display:inline-flex;align-items:center;gap:8px;margin-top:22px;
-    padding:10px 18px;background:var(--accent);color:#fff;font-weight:600;font-size:14px;
-    text-decoration:none;border-radius:8px;box-shadow:var(--shadow);
-    transition:background .2s,transform .1s}
-  .slides-btn:hover{background:var(--accent-ink)}
-  .slides-btn:active{transform:translateY(1px)}
-
-  /* sticky OS control */
-  .controls{position:sticky;top:4px;z-index:30;background:var(--bg);
-    padding:14px 0 12px;margin-bottom:8px;
-    border-bottom:1px solid var(--border)}
-  .controls-inner{display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between}
-  .os-label{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.12em;
-    text-transform:uppercase;color:var(--faint);font-weight:600}
-  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);
-    border-radius:11px;padding:3px;gap:2px;flex-wrap:wrap}
-  .seg button{font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;font-weight:500;
-    color:var(--muted);background:transparent;border:0;padding:7px 13px;border-radius:8px;
-    cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
-  .seg button:hover{color:var(--ink)}
-  .seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent-ink);
-    box-shadow:var(--shadow);font-weight:600}
-  .util{display:flex;align-items:center;gap:8px}
+  /* top bar */
+  .topbar{display:flex;justify-content:flex-end;gap:8px;padding:18px 0 0}
   .theme-toggle,.lang-toggle{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);
     background:var(--surface-2);border:1px solid var(--border);border-radius:9px;
     padding:8px 12px;cursor:pointer;transition:color .15s,border-color .15s}
   .theme-toggle:hover,.lang-toggle:hover{color:var(--ink);border-color:var(--border-strong)}
   .lang-toggle{font-weight:600;min-width:64px}
-  html[lang="ko"] .lang-toggle,html[lang="ko"] .os-label,html[lang="ko"] .eyebrow,
-  html[lang="ko"] .meta,html[lang="ko"] .code-tag{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
 
-  /* steps */
-  main{padding:20px 0 40px;counter-reset:step}
-  .step{display:grid;grid-template-columns:52px 1fr;gap:22px;
-    padding:30px 0;border-top:1px solid var(--border)}
-  .step:first-of-type{border-top:0}
-  .stepnum{position:relative}
-  .stepnum .dot{position:sticky;top:82px;width:52px;height:52px;border-radius:14px;
-    background:var(--surface);border:1.5px solid var(--border-strong);
-    display:flex;align-items:center;justify-content:center;
-    font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:1.35rem;
-    color:var(--accent-ink);box-shadow:var(--shadow);transition:background .2s,border-color .2s,color .2s}
-  .step.done .stepnum .dot{background:var(--accent);border-color:var(--accent);color:#fff}
-  .step.done .stepnum .dot::after{content:"✓";font-size:1.5rem}
-  .step.done .stepnum .dot span{display:none}
-  .step-body{min-width:0}
-  .step-body h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;
-    font-size:1.5rem;letter-spacing:-.01em;margin:2px 0 6px;text-wrap:balance}
-  .step-body p{margin:0 0 14px;color:var(--muted)}
-  .step-body p strong{color:var(--ink);font-weight:600}
-  .inline-link{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-wash);
-    font-weight:500}
-  .inline-link:hover{border-bottom-color:var(--accent)}
-  code.ic{font-family:"IBM Plex Mono",monospace;font-size:.86em;
-    background:var(--surface-2);border:1px solid var(--border);border-radius:5px;
-    padding:1px 5px;color:var(--accent-ink)}
+  /* header */
+  header{padding:30px 0 34px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent-ink);font-weight:600;margin:0 0 14px}
+  h1{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;
+    font-size:clamp(2.3rem,6vw,3.6rem);line-height:1.02;letter-spacing:-.02em;
+    margin:0 0 16px;text-wrap:balance}
+  .lede{font-size:1.12rem;color:var(--muted);max-width:62ch;margin:0}
+  .contact{margin-top:18px;font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--faint)}
+  .contact a{color:var(--accent-ink);text-decoration:none}
+  html[lang="ko"] .eyebrow,html[lang="ko"] .contact,html[lang="ko"] .lang-toggle,
+  html[lang="ko"] .wk-num,html[lang="ko"] .progress-txt{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
 
-  /* code block */
-  .code{background:var(--code-bg);border:1px solid var(--code-border);border-radius:12px;
-    overflow:hidden;margin:0 0 16px;box-shadow:var(--shadow)}
-  .code-head{display:flex;align-items:center;justify-content:space-between;
-    padding:8px 12px 8px 14px;background:var(--code-surface);border-bottom:1px solid var(--code-border)}
-  .code-tag{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;
-    text-transform:uppercase;color:var(--code-muted);font-weight:500}
-  .copy{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--code-muted);
-    background:transparent;border:1px solid var(--code-border);border-radius:7px;
-    padding:5px 10px;cursor:pointer;transition:color .15s,border-color .15s}
-  .copy:hover{color:var(--code-ink);border-color:var(--code-muted)}
-  .copy.copied{color:var(--code-prompt);border-color:var(--code-prompt)}
-  pre{margin:0;padding:14px 16px;overflow-x:auto}
-  pre code{font-family:"IBM Plex Mono",monospace;font-size:13.5px;line-height:1.7;
-    color:var(--code-ink);white-space:pre;display:block}
-  pre .cmt{color:var(--code-muted)}
-  pre .pr{color:var(--code-prompt);user-select:none}
+  /* start-here note */
+  .start{display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start;
+    background:var(--accent-wash);border:1px solid var(--border);border-radius:12px;
+    padding:14px 18px;margin:0 0 22px}
+  .start .ci{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;
+    width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+    background:var(--accent);color:#fff}
+  .start p{margin:0;color:var(--muted)}
+  .start strong{color:var(--ink)}
 
-  /* os-specific visibility */
-  [data-os]{display:none}
-  [data-os].os-on{display:block}
-
-  /* callouts */
-  .callout{border-radius:12px;padding:16px 18px;margin:0 0 16px;border:1px solid;
-    display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start}
-  .callout .ci{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;
-    width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center}
-  .callout p{margin:0 0 8px}
-  .callout p:last-child{margin:0}
-  .callout .ct{font-weight:600;display:block;margin-bottom:3px}
-  .verify{background:var(--ok-bg);border-color:var(--ok-border)}
-  .verify .ci{background:var(--ok);color:#fff}
-  .verify .ct{color:var(--ok)}
-  .verify code.ic{background:transparent;border-color:var(--ok-border);color:var(--ok)}
-  .warn{background:var(--warn-bg);border-color:var(--warn-border)}
-  .warn .ci{background:var(--warn);color:#fff}
-  .warn .ct{color:var(--warn)}
-  .warn code.ic{background:transparent;border-color:var(--warn-border);color:var(--warn)}
-  .tip{background:var(--accent-wash);border-color:var(--border)}
-  .tip .ci{background:var(--accent);color:#fff}
-  .tip .ct{color:var(--accent-ink)}
-
-  /* done toggle */
-  .done-row{margin-top:6px}
-  .done-btn{display:inline-flex;align-items:center;gap:10px;
-    font-family:"IBM Plex Sans",sans-serif;font-size:14px;font-weight:500;color:var(--muted);
-    background:var(--surface);border:1px solid var(--border);border-radius:10px;
-    padding:9px 15px;cursor:pointer;transition:color .15s,border-color .15s,background .15s}
-  .done-btn:hover{border-color:var(--border-strong);color:var(--ink)}
-  .done-btn .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border-strong);
-    display:flex;align-items:center;justify-content:center;font-size:12px;transition:background .15s,border-color .15s}
-  .step.done .done-btn{color:var(--ok);border-color:var(--ok-border);background:var(--ok-bg)}
-  .step.done .done-btn .box{background:var(--ok);border-color:var(--ok);color:#fff}
-
-  /* cheat sheet */
-  .cheat{margin:12px 0 60px;border:1px solid var(--border);border-radius:16px;
-    background:var(--surface);padding:26px 26px 10px;box-shadow:var(--shadow)}
-  .cheat h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:1.4rem;
-    margin:0 0 4px;letter-spacing:-.01em}
-  .cheat p{color:var(--muted);margin:0 0 18px;font-size:.95rem}
+  /* class list */
+  .toc-head{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint);font-weight:600;margin:0 0 12px}
+  ol.classes{list-style:none;margin:0 0 50px;padding:0;display:grid;gap:14px}
+  .card{display:grid;grid-template-columns:76px 1fr;gap:20px;background:var(--surface);
+    border:1px solid var(--border);border-radius:16px;padding:22px 24px;box-shadow:var(--shadow);
+    transition:border-color .15s}
+  .card:hover{border-color:var(--border-strong)}
+  .wk-num{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--faint);font-weight:600;text-align:center}
+  .wk-num b{display:block;font-family:"Bricolage Grotesque",sans-serif;font-size:2.4rem;line-height:1.05;
+    letter-spacing:-.02em;color:var(--accent-ink);font-weight:800}
+  .card h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:1.45rem;
+    letter-spacing:-.01em;margin:0 0 6px}
+  .card h2 a{color:inherit;text-decoration:none}
+  .card h2 a:hover{color:var(--accent-ink)}
+  .card p{margin:0 0 12px;color:var(--muted)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px;padding:0;list-style:none}
+  .chips li{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--accent-ink);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:2px 8px}
+  .actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .btn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:8px;
+    font-weight:600;font-size:13.5px;text-decoration:none;border:1px solid var(--border);
+    color:var(--accent-ink);background:var(--surface);transition:background .15s,border-color .15s}
+  .btn:hover{background:var(--surface-2);border-color:var(--border-strong)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
+  .progress{margin-left:auto;display:flex;align-items:center;gap:9px}
+  .progress-txt{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--faint);white-space:nowrap}
+  .progress-bar{width:70px;height:5px;border-radius:3px;background:var(--surface-2);
+    border:1px solid var(--border);overflow:hidden}
+  .progress-bar span{display:block;height:100%;background:var(--ok)}
+  .card.complete .progress-txt{color:var(--ok)}
 
   footer{padding:20px 0 60px;border-top:1px solid var(--border);
     color:var(--faint);font-family:"IBM Plex Mono",monospace;font-size:12px}
   footer a{color:var(--accent-ink);text-decoration:none}
-
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 
   @media (max-width:620px){
-    .step{grid-template-columns:40px 1fr;gap:14px}
-    .stepnum .dot{width:40px;height:40px;font-size:1.05rem}
-    .stepnum .dot::after{font-size:1.15rem}
-    header{padding:40px 0 22px}
+    .wrap{padding:0 16px}
+    .card{grid-template-columns:1fr;gap:6px;padding:18px}
+    .wk-num{text-align:left}
+    .wk-num b{display:inline;font-size:1.6rem;margin-left:6px}
+    .progress{margin-left:0;width:100%}
   }
 </style>
 </head>
 <body>
-<div class="progress-bar"><div class="progress-fill" id="pfill"></div></div>
-
 <div class="wrap">
-  <header>
-    <p class="eyebrow i18n" data-ko='스마트 시설 관리 - 실습 세션 · 2주차'>Smart Facility Management - Practical Session · Week 02 . (For any queries please feel free to reachout: mugojames254@skku.edu)</p>
-    <h1 class="i18n" data-ko='시작하기: 작업 환경 설정하기'>Getting Started: Setting up Your Workstation</h1>
-    <p class="lede i18n" data-ko='위에서 아래로 순서대로 따라오세요. 아래에서 사용하는 운영체제를 한 번 선택하면 모든 명령어가 그에 맞게 바뀝니다. 각 단계를 마칠 때마다 체크하세요 — 진행 상황은 이 기기에 저장됩니다.'>Follow along, top to bottom. Pick your system once below and every command switches to match it. Check off each step as you go — your progress is saved on this device.</p>
-    <div class="meta">
-      <span class="i18n" data-ko='<b>에디터</b> VS Code'><b>Editor</b> VS Code</span>
-      <span class="i18n" data-ko='<b>버전 관리</b> Git'><b>Version Control</b> Git</span>
-      <span class="i18n" data-ko='<b>관리 도구</b> uv'><b>Manager</b> uv</span>
-      <span class="i18n" data-ko='<b>런타임</b> Python 3.12'><b>Runtime</b> Python 3.12</span>
-      <span class="i18n" data-ko='<b>노트북</b> Jupyter'><b>Notebook</b> Jupyter</span>
-      <span class="i18n" data-ko='<b>딥러닝</b> PyTorch'><b>Deep Learning</b> PyTorch</span>
-    </div>
-    <a class="slides-btn" href="smart_facility_setup.pptx" download>
-      <span aria-hidden="true">⬇</span>
-      <span class="i18n" data-ko='수업 자료 슬라이드 내려받기 (.pptx)'>Download class slides (.pptx)</span>
-    </a>
-    <a class="slides-btn" href="week04.html" style="margin-left:8px">
-      <span class="i18n" data-ko='4주차 실습으로 이동'>Go to Week 4 practical</span>
-      <span aria-hidden="true">→</span>
-    </a>
-  </header>
-</div>
-
-<div class="controls">
-  <div class="wrap controls-inner">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <span class="os-label i18n" data-ko='사용 중인 시스템'>Your system</span>
-      <div class="seg" role="group" aria-label="Choose your operating system">
-        <button data-set="win-cmd" aria-pressed="true">Windows · cmd</button>
-        <button data-set="win-ps" aria-pressed="false">Windows · PowerShell</button>
-        <button data-set="mac" aria-pressed="false">macOS</button>
-        <button data-set="linux" aria-pressed="false">Linux</button>
-      </div>
-    </div>
-    <div class="util">
-      <button class="lang-toggle" id="langBtn" aria-label="Switch language">한국어</button>
-      <button class="theme-toggle" id="themeBtn" aria-label="Toggle color theme">◐ theme</button>
-    </div>
+  <div class="topbar">
+    <button class="lang-toggle" id="langBtn" aria-label="Switch language">한국어</button>
+    <button class="theme-toggle" id="themeBtn" aria-label="Toggle color theme">◐ theme</button>
   </div>
-</div>
 
-<div class="wrap">
+  <header>
+    <p class="eyebrow i18n" data-ko='스마트 시설 관리 · 실습 세션'>Smart Facility Management · Practical sessions</p>
+    <h1 class="i18n" data-ko='강의 홈'>Course home</h1>
+    <p class="lede i18n" data-ko='노트북 설정부터 로봇 스캔으로 실제 건물을 측정하기까지, 직접 해 보는 Python 실습입니다. 아래에서 수업을 골라 열고 위에서 아래로 따라오세요.'>Hands-on Python classes, from setting up your laptop to measuring a real building from robot scans. Pick a class below, open it, and follow it top to bottom.</p>
+    <p class="contact"><span class="i18n" data-ko='문의:'>Questions:</span> <a href="mailto:mugojames254@skku.edu">mugojames254@skku.edu</a></p>
+  </header>
+
   <main>
+    <div class="start">
+      <div class="ci">i</div>
+      <p class="i18n" data-ko='<strong>처음이신가요?</strong> <strong>2주차: 설치</strong> 부터 시작하세요. 이후 모든 수업은 거기서 설치한 도구를 사용합니다.'><strong>New here?</strong> Start with <strong>Week 2: Setup</strong>. Every later class uses the tools you install there.</p>
+    </div>
 
-    <!-- STEP 1 : VS CODE -->
-    <section class="step" id="s1">
-      <div class="stepnum"><div class="dot"><span>1</span></div></div>
-      <div class="step-body">
-        <h2 class="i18n" data-ko='VS Code 설치'>Install VS Code</h2>
-        <p class="i18n" data-ko='코드를 작성하는 에디터입니다. 모든 시스템용 다운로드 페이지: <a class="inline-link" href="https://code.visualstudio.com/download" target="_blank" rel="noopener">code.visualstudio.com/download</a>. 또는 터미널에서 바로 설치할 수 있습니다:'>The editor we write our code in. Download page for every system: <a class="inline-link" href="https://code.visualstudio.com/download" target="_blank" rel="noopener">code.visualstudio.com/download</a>. Or install straight from the terminal:</p>
-
-        <div data-os="win-cmd win-ps" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">Windows · winget</span><button class="copy">copy</button></div>
-            <pre><code>winget install --id Microsoft.VisualStudioCode -e</code></pre>
-          </div>
-        </div>
-
-        <div data-os="mac" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">macOS · Homebrew</span><button class="copy">copy</button></div>
-            <pre><code>brew install --cask visual-studio-code</code></pre>
-          </div>
-          <p style="font-size:.9rem" class="i18n" data-ko='아직 Homebrew가 없나요? <a class="inline-link" href="https://brew.sh" target="_blank" rel="noopener">brew.sh</a> 에서 설치하세요.'><span class="cmt"></span>No Homebrew yet? Install it from <a class="inline-link" href="https://brew.sh" target="_blank" rel="noopener">brew.sh</a>.</p>
-        </div>
-
-        <div data-os="linux" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">Linux · Debian / Ubuntu</span><button class="copy">copy</button></div>
-<pre><code><span class="cmt"># add Microsoft's package repo, then install</span>
-sudo apt update &amp;&amp; sudo apt install -y wget gpg
-wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor &gt; microsoft.gpg
-sudo install -D -o root -g root -m 644 microsoft.gpg /usr/share/keyrings/microsoft.gpg
-echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | sudo tee /etc/apt/sources.list.d/vscode.list
-sudo apt update &amp;&amp; sudo apt install -y code</code></pre>
-          </div>
-        </div>
-
-        <div class="callout verify">
-          <div class="ci">✓</div>
-          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
-            <p class="i18n" data-ko='터미널을 닫았다가 다시 연 뒤 <code class="ic">code --version</code> 을 실행하세요. 버전 번호가 표시되어야 합니다.'>Close and reopen the terminal, then run <code class="ic">code --version</code>. You should see a version number.</p>
-          </div>
-        </div>
-        <div class="done-row"><button class="done-btn" data-done="s1"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
-      </div>
-    </section>
-
-    <!-- STEP 2 : GIT -->
-    <section class="step" id="s2">
-      <div class="stepnum"><div class="dot"><span>2</span></div></div>
-      <div class="step-body">
-        <h2 class="i18n" data-ko='Git 설치'>Install Git</h2>
-        <p class="i18n" data-ko='Git은 수업 프로젝트를 내려받고 변경 사항을 관리하는 버전 관리 도구입니다. 코드를 클론(clone)하고 푸시(push)하려면 무료 <a class="inline-link" href="https://github.com/signup" target="_blank" rel="noopener">GitHub</a> 계정도 필요합니다 — 아직 없다면 지금 하나 만드세요.'>Git is the version-control tool we use to download class projects and track your changes. You'll also need a free <a class="inline-link" href="https://github.com/signup" target="_blank" rel="noopener">GitHub</a> account to clone and push code — make one now if you don't have it.</p>
-
-        <div data-os="win-cmd win-ps" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">Windows · winget</span><button class="copy">copy</button></div>
-            <pre><code>winget install --id Git.Git -e</code></pre>
-          </div>
-        </div>
-
-        <div data-os="mac" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">macOS · Homebrew</span><button class="copy">copy</button></div>
-            <pre><code>brew install git</code></pre>
-          </div>
-          <p style="font-size:.9rem" class="i18n" data-ko='아직 Homebrew가 없나요? <a class="inline-link" href="https://brew.sh" target="_blank" rel="noopener">brew.sh</a> 에서 설치하세요.'><span class="cmt"></span>No Homebrew yet? Install it from <a class="inline-link" href="https://brew.sh" target="_blank" rel="noopener">brew.sh</a>.</p>
-        </div>
-
-        <div data-os="linux" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">Linux · Debian / Ubuntu</span><button class="copy">copy</button></div>
-            <pre><code>sudo apt update &amp;&amp; sudo apt install -y git</code></pre>
-          </div>
-        </div>
-
-        <p class="i18n" data-ko='<strong>GitHub CLI (<code class="ic">gh</code>)</strong> 를 설치하면 GitHub에 한 번 로그인해 두고, 매번 토큰을 붙여넣지 않아도 HTTPS로 클론/푸시할 수 있습니다. Windows·macOS·Linux 모두 동일하게 동작합니다.'>Install <strong>GitHub CLI (<code class="ic">gh</code>)</strong> so you log in to GitHub once, then clone and push over HTTPS without pasting a token every time. It works the same on Windows, macOS, and Linux.</p>
-
-        <div data-os="win-cmd win-ps" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">Windows · winget</span><button class="copy">copy</button></div>
-            <pre><code>winget install --id GitHub.cli -e</code></pre>
-          </div>
-        </div>
-
-        <div data-os="mac" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">macOS · Homebrew</span><button class="copy">copy</button></div>
-            <pre><code>brew install gh</code></pre>
-          </div>
-        </div>
-
-        <div data-os="linux" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">Linux · Debian / Ubuntu</span><button class="copy">copy</button></div>
-            <pre><code>sudo apt update &amp;&amp; sudo apt install -y gh</code></pre>
-          </div>
-        </div>
-
-        <p class="i18n" data-ko='그런 다음 로그인하고 안내에 따르세요 — <strong>GitHub.com</strong>, <strong>HTTPS</strong>, <strong>웹 브라우저로 로그인</strong> 을 선택하세요. 이렇게 하면 <code class="ic">gh</code> 가 Git 자격 증명 도우미로 설정되어 <code class="ic">git clone</code> / <code class="ic">git push</code> 가 바로 동작합니다.'>Then log in and follow the prompts — choose <strong>GitHub.com</strong>, <strong>HTTPS</strong>, and <strong>Login with a web browser</strong>. This sets <code class="ic">gh</code> as your Git credential helper, so <code class="ic">git clone</code> / <code class="ic">git push</code> just work.</p>
-        <div class="code">
-          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템'>all systems</span><button class="copy">copy</button></div>
-          <pre><code>gh auth login</code></pre>
-        </div>
-
-        <p class="i18n" data-ko='커밋에 이름이 표시되도록 신원을 한 번 설정하세요 (GitHub 계정에 연결된 이메일 사용):'>Set your identity once so your commits are labelled (use the email tied to your GitHub account):</p>
-        <div class="code">
-          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템 · 한 번만 설정'>all systems · set once</span><button class="copy">copy</button></div>
-<pre><code>git config --global user.name "Your Name"
-git config --global user.email "you@example.com"</code></pre>
-        </div>
-
-        <div class="callout verify">
-          <div class="ci">✓</div>
-          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
-            <p class="i18n" data-ko='새 터미널에서 <code class="ic">git --version</code> 과 <code class="ic">gh --version</code> 을 실행하세요. 두 버전 번호가 모두 보여야 합니다.'>Open a new terminal and run <code class="ic">git --version</code> and <code class="ic">gh --version</code>. You should see a version number for each.</p>
-          </div>
-        </div>
-        <div class="done-row"><button class="done-btn" data-done="s2"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
-      </div>
-    </section>
-
-    <!-- STEP 3 : UV -->
-    <section class="step" id="s3">
-      <div class="stepnum"><div class="dot"><span>3</span></div></div>
-      <div class="step-body">
-        <h2 class="i18n" data-ko='uv 설치'>Install uv</h2>
-        <p class="i18n" data-ko='<strong>uv</strong> 는 Python 자체, 가상 환경, 패키지를 하나로 관리하는 빠른 도구입니다. 먼저 설치하세요 — 다음 단계에서 uv가 Python을 설치해 줍니다.'><strong>uv</strong> is one fast tool that manages Python itself, virtual environments, and packages. Install it first — it installs Python for us in the next step.</p>
-
-        <div data-os="win-cmd win-ps" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">Windows · PowerShell</span><button class="copy">copy</button></div>
-            <pre><code>powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code></pre>
-          </div>
-          <p style="font-size:.9rem" class="i18n" data-ko='평소에 cmd를 쓰더라도 이 명령은 <strong>PowerShell</strong> 에서 실행하세요 — 한 번만 설치하면 됩니다.'>Run this in <strong>PowerShell</strong> even if you use cmd for everything else — it is a one-time install.</p>
-        </div>
-
-        <div data-os="mac linux" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">macOS / Linux</span><button class="copy">copy</button></div>
-            <pre><code>curl -LsSf https://astral.sh/uv/install.sh | sh</code></pre>
-          </div>
-        </div>
-
-        <div class="callout verify">
-          <div class="ci">✓</div>
-          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
-            <p class="i18n" data-ko='<strong>새</strong> 터미널을 열고 <code class="ic">uv --version</code> 을 실행하세요. &quot;not recognized&quot; 또는 &quot;command not found&quot; 라고 나오면, 모든 터미널을 완전히 닫고 새로 열어 갱신된 PATH가 적용되도록 하세요.'>Open a <strong>new</strong> terminal, then run <code class="ic">uv --version</code>. If it says "not recognized" or "command not found", fully close every terminal and open a fresh one so it picks up the updated PATH.</p>
-          </div>
-        </div>
-        <div class="done-row"><button class="done-btn" data-done="s3"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
-      </div>
-    </section>
-
-    <!-- STEP 4 : PYTHON -->
-    <section class="step" id="s4">
-      <div class="stepnum"><div class="dot"><span>4</span></div></div>
-      <div class="step-body">
-        <h2 class="i18n" data-ko='Python 설치'>Install Python</h2>
-        <p class="i18n" data-ko='uv가 Python을 설치하고 관리하도록 맡깁니다. 명령어는 <strong>모든 시스템에서 동일</strong>합니다:'>We let uv install and manage Python for us. The command is the <strong>same on every system</strong>:</p>
-        <div class="code">
-          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템'>all systems</span><button class="copy">copy</button></div>
-          <pre><code>uv python install 3.12</code></pre>
-        </div>
-        <div class="callout verify">
-          <div class="ci">✓</div>
-          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
-            <p class="i18n" data-ko='<code class="ic">uv python list</code> 를 실행하면 목록에 <code class="ic">3.12</code> 가 보여야 합니다.'>Run <code class="ic">uv python list</code> — you should see <code class="ic">3.12</code> in the list.</p>
-          </div>
-        </div>
-        <div class="done-row"><button class="done-btn" data-done="s4"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
-      </div>
-    </section>
-
-    <!-- STEP 5 : VENV -->
-    <section class="step" id="s5">
-      <div class="stepnum"><div class="dot"><span>5</span></div></div>
-      <div class="step-body">
-        <h2 class="i18n" data-ko='가상 환경 만들기 &amp; 활성화'>Create &amp; activate a virtual environment</h2>
-        <p class="i18n" data-ko='가상 환경은 프로젝트마다 패키지를 서로 분리해 둡니다. 프로젝트 폴더 안에서 하나 만드세요:'>A virtual environment keeps each project's packages separate. From inside your project folder, create one:</p>
-        <div class="code">
-          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템 · .venv 폴더 생성'>all systems · creates a .venv folder</span><button class="copy">copy</button></div>
-          <pre><code>uv venv</code></pre>
-        </div>
-
-        <p class="i18n" data-ko='이제 <strong>활성화</strong>하세요. 명령어는 사용하는 터미널에 따라 다릅니다:'>Now <strong>activate</strong> it. The command depends on your terminal:</p>
-
-        <div data-os="win-cmd" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">Windows · Command Prompt</span><button class="copy">copy</button></div>
-            <pre><code>.venv\Scripts\activate.bat</code></pre>
-          </div>
-        </div>
-        <div data-os="win-ps" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">Windows · PowerShell</span><button class="copy">copy</button></div>
-            <pre><code>.venv\Scripts\Activate.ps1</code></pre>
-          </div>
-        </div>
-        <div data-os="mac linux" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag">macOS / Linux</span><button class="copy">copy</button></div>
-            <pre><code>source .venv/bin/activate</code></pre>
-          </div>
-        </div>
-
-        <p class="i18n" data-ko='활성화되면 프롬프트 앞에 <code class="ic">(.venv)</code> 가 표시됩니다. 나중에 빠져나오려면 <code class="ic">deactivate</code> 를 실행하세요.'>When active, your prompt shows <code class="ic">(.venv)</code> at the start. To leave it later, run <code class="ic">deactivate</code>.</p>
-
-        <div data-os="win-ps" class="osblock">
-          <div class="callout warn">
-            <div class="ci">!</div>
-            <div>
-              <span class="ct i18n" data-ko='PowerShell이 활성화 스크립트를 막나요?'>PowerShell blocks the activation script?</span>
-              <p class="i18n" data-ko='<code class="ic">Activate.ps1</code> 실행 시 <em>&quot;…cannot be loaded because running scripts is disabled on this system&quot;</em> 오류가 나면, PowerShell이 <code class="ic">.ps1</code> 스크립트를 막고 있는 것입니다. 사용자 계정에 서명된 로컬 스크립트를 허용하세요 — <strong>한 번만 실행</strong>:'>If <code class="ic">Activate.ps1</code> errors with <em>"…cannot be loaded because running scripts is disabled on this system"</em>, PowerShell is blocking the <code class="ic">.ps1</code> script. Allow signed local scripts for your user — <strong>run once</strong>:</p>
-              <div class="code" style="margin-top:4px">
-                <div class="code-head"><span class="code-tag i18n" data-ko='PowerShell · 한 번만 실행'>PowerShell · run once</span><button class="copy">copy</button></div>
-                <pre><code>Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser</code></pre>
-              </div>
-              <p class="i18n" data-ko='메시지가 나오면 <code class="ic">Y</code> 를 입력한 뒤 활성화 명령을 다시 실행하세요. 설정을 바꾸고 싶지 않다면 <strong>명령 프롬프트(cmd)</strong> 를 사용하세요 — <code class="ic">activate.bat</code> 은 이 설정의 영향을 받지 않습니다.'>Answer <code class="ic">Y</code> if prompted, then run the activation command again. Prefer not to change it? Use <strong>Command Prompt</strong> instead — <code class="ic">activate.bat</code> is not affected by this setting.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="done-row"><button class="done-btn" data-done="s5"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
-      </div>
-    </section>
-
-    <!-- STEP 6 : JUPYTER -->
-    <section class="step" id="s6">
-      <div class="stepnum"><div class="dot"><span>6</span></div></div>
-      <div class="step-body">
-        <h2 class="i18n" data-ko='Jupyter Notebook 설치'>Install Jupyter Notebook</h2>
-        <p class="i18n" data-ko='환경이 <strong>활성화된 상태</strong> 에서 (프롬프트에 <code class="ic">(.venv)</code> 표시), 노트북 패키지를 설치하세요:'>With the environment <strong>activated</strong> (<code class="ic">(.venv)</code> showing in your prompt), install the notebook packages:</p>
-        <div class="code">
-          <div class="code-head"><span class="code-tag i18n" data-ko='활성화된 .venv 안에서'>inside the active .venv</span><button class="copy">copy</button></div>
-          <pre><code>uv pip install jupyter ipykernel</code></pre>
-        </div>
-        <p class="i18n" data-ko='<code class="ic">jupyter</code> 는 노트북 앱이고, <code class="ic">ipykernel</code> 은 이 환경을 노트북 커널로 쓸 수 있게 해줍니다. 이제 노트북이 프로젝트의 Python을 찾을 수 있도록 등록하세요:'><code class="ic">jupyter</code> is the notebook app; <code class="ic">ipykernel</code> lets this environment run as a notebook kernel. Now register it so notebooks can find your project's Python:</p>
-        <div class="code">
-          <div class="code-head"><span class="code-tag i18n" data-ko='커널 등록'>register the kernel</span><button class="copy">copy</button></div>
-          <pre><code>python -m ipykernel install --user --name=project-venv --display-name "Python (project-venv)"</code></pre>
-        </div>
-        <p class="i18n" data-ko='실행하세요:'>Launch it:</p>
-        <div class="code">
-          <div class="code-head"><span class="code-tag i18n" data-ko='브라우저에서 열립니다'>opens in your browser</span><button class="copy">copy</button></div>
-          <pre><code>jupyter notebook</code></pre>
-        </div>
-
-        <div class="callout tip">
-          <div class="ci">i</div>
-          <div><span class="ct i18n" data-ko='VS Code 안에서 작업하고 싶나요?'>Prefer to stay in VS Code?</span>
-            <p class="i18n" data-ko='<code class="ic">.ipynb</code> 파일을 VS Code에서 바로 열 수 있습니다. <strong>Python</strong> 과 <strong>Jupyter</strong> 확장을 설치하고 (확장 패널, <code class="ic">Ctrl+Shift+X</code>), 노트북 오른쪽 위에서 <strong>Python (project-venv)</strong> 커널을 선택하세요.'>Open any <code class="ic">.ipynb</code> file directly in VS Code. Install the <strong>Python</strong> and <strong>Jupyter</strong> extensions (Extensions panel, <code class="ic">Ctrl+Shift+X</code>), then pick the <strong>Python (project-venv)</strong> kernel in the notebook's top-right corner.</p>
-          </div>
-        </div>
-        <div class="done-row"><button class="done-btn" data-done="s6"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
-      </div>
-    </section>
-
-    <!-- STEP 7 : PYTORCH -->
-    <section class="step" id="s7">
-      <div class="stepnum"><div class="dot"><span>7</span></div></div>
-      <div class="step-body">
-        <h2 class="i18n" data-ko='PyTorch 설치'>Install PyTorch</h2>
-        <p class="i18n" data-ko='<strong>PyTorch</strong> 는 객체 탐지와 비전-언어 모델(VLM)의 기반이 되는 딥러닝 라이브러리입니다. <strong>활성화된 <code class="ic">(.venv)</code> 안에서</strong> 설치하세요. 명령어는 NVIDIA GPU 유무에 따라 다릅니다.'><strong>PyTorch</strong> is the deep-learning library behind object detection and vision-language models. Install it <strong>inside your activated <code class="ic">(.venv)</code></strong>. Which command depends on whether you have an NVIDIA GPU.</p>
-
-        <div data-os="win-cmd win-ps linux" class="osblock">
-          <p class="i18n" data-ko='먼저 NVIDIA GPU가 있는지 확인하세요:'>First, check whether you have an NVIDIA GPU:</p>
-          <div class="code">
-            <div class="code-head"><span class="code-tag i18n" data-ko='NVIDIA GPU 확인'>check for an NVIDIA GPU</span><button class="copy">copy</button></div>
-            <pre><code>nvidia-smi</code></pre>
-          </div>
-          <p style="font-size:.92rem" class="i18n" data-ko='GPU 정보 표가 출력되면 아래 <strong>CUDA</strong> 명령을 사용하세요. 오류가 나거나 명령을 찾을 수 없으면 <strong>CPU</strong> 명령을 사용하세요.'>If that prints a table of GPU info, use the <strong>CUDA</strong> command below. If it errors or is not found, use the <strong>CPU</strong> command.</p>
-
-          <div class="code">
-            <div class="code-head"><span class="code-tag i18n" data-ko='NVIDIA GPU (CUDA)'>NVIDIA GPU · CUDA</span><button class="copy">copy</button></div>
-            <pre><code>uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124</code></pre>
-          </div>
-          <div class="code">
-            <div class="code-head"><span class="code-tag i18n" data-ko='GPU 없음 · CPU 전용'>no GPU · CPU only</span><button class="copy">copy</button></div>
-            <pre><code>uv pip install torch torchvision</code></pre>
-          </div>
-        </div>
-
-        <div data-os="mac" class="osblock">
-          <div class="code">
-            <div class="code-head"><span class="code-tag i18n" data-ko='macOS · Apple Silicon / Intel'>macOS · Apple Silicon / Intel</span><button class="copy">copy</button></div>
-            <pre><code>uv pip install torch torchvision</code></pre>
-          </div>
-          <p style="font-size:.92rem" class="i18n" data-ko='Apple Silicon GPU는 MPS를 통해 자동으로 사용됩니다 — 추가 명령이 필요 없습니다. (macOS에는 CUDA가 없습니다.)'>Apple Silicon GPUs are used automatically through MPS — no extra command. (There is no CUDA on macOS.)</p>
-        </div>
-
-        <p class="i18n" data-ko='설치가 끝나면 다음을 실행해 버전과 GPU 사용 가능 여부를 확인하세요:'>Once it finishes, run this to print the version and whether the GPU is available:</p>
-        <div class="code">
-          <div class="code-head"><span class="code-tag i18n" data-ko='동작 확인'>verify it works</span><button class="copy">copy</button></div>
-          <pre><code>python -c "import torch; print(torch.__version__, torch.cuda.is_available())"</code></pre>
-        </div>
-        <div class="callout verify">
-          <div class="ci">✓</div>
-          <div><span class="ct i18n" data-ko='결과 읽는 법'>Reading the result</span>
-            <p class="i18n" data-ko='<code class="ic">True</code> 면 GPU 준비 완료입니다. <code class="ic">False</code> 여도 괜찮습니다 — CPU로 실행되며 조금 느릴 뿐입니다.'><code class="ic">True</code> means the GPU is ready. <code class="ic">False</code> is fine too — it just runs on CPU, only slower.</p>
-          </div>
-        </div>
-        <div class="done-row"><button class="done-btn" data-done="s7"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
-      </div>
-    </section>
-
+    <p class="toc-head i18n" data-ko='수업 목록'>Classes</p>
+    <ol class="classes" id="classes"></ol>
   </main>
 
-  <!-- CHEAT SHEET -->
-  <section class="cheat">
-    <h2 class="i18n" data-ko='한 화면 요약 (치트 시트)'>One-screen cheat sheet</h2>
-    <p class="i18n" data-ko='위 내용을 순서대로 정리했습니다 — 흐름을 익힌 뒤 참고용으로 쓰세요.'>Everything above, in order — for reference once you know the flow.</p>
-    <div class="code">
-      <div class="code-head"><span class="code-tag" id="cheatTag">Windows · cmd</span><button class="copy">copy</button></div>
-      <pre><code id="cheatCode"></code></pre>
-    </div>
-  </section>
-
   <footer>
-    <span class="i18n" data-ko='프로그래밍 부트캠프 · 설치 가이드 · Windows, macOS &amp; Linux 지원 · 에디터'>Programming Bootcamp · setup guide · works on Windows, macOS &amp; Linux · editor</span>
-    <a href="https://code.visualstudio.com" target="_blank" rel="noopener">VS Code</a> ·
-    <span class="i18n" data-ko='관리 도구'>manager</span>
-    <a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener">uv</a>
+    <span class="i18n" data-ko='스마트 시설 관리 · 실습 세션 · 진행 상황은 이 기기에 저장됩니다'>Smart Facility Management · practical sessions · your progress is saved on this device</span> ·
+    <a href="https://github.com/mugojames254/smart_facility_coursework" target="_blank" rel="noopener">GitHub</a>
   </footer>
 </div>
 
 <script>
 (function(){
-  var KEY_OS="setup.os", KEY_DONE="setup.done", KEY_THEME="setup.theme", KEY_LANG="setup.lang";
-  var lang="en";
+  /* ---- the class list: add a new week here ---- */
+  var CLASSES=[
+    { week:"02", page:"setup.html", key:"setup.done", steps:7,
+      title:{ en:"Setup: your workstation", ko:"설치: 작업 환경" },
+      text:{ en:"Install VS Code, Git, uv and Python 3.12, create your first virtual environment, and check that Jupyter and PyTorch run.",
+             ko:"VS Code, Git, uv, Python 3.12 를 설치하고, 첫 가상 환경을 만든 뒤 Jupyter 와 PyTorch 가 실행되는지 확인합니다." },
+      tags:["VS Code","Git","uv","Python 3.12","Jupyter","PyTorch"],
+      files:[ { href:"smart_facility_setup.pptx", en:"Slides", ko:"슬라이드" } ] },
+    { week:"04", page:"week04.html", key:"week04.done", steps:8,
+      title:{ en:"Point clouds: exploring a robot facility scan", ko:"포인트 클라우드: 로봇 시설 스캔 탐색" },
+      text:{ en:"Start a uv project, open the UGV's lidar and colour scans of a real corridor, map the robot's route, and check the building against its BIM design.",
+             ko:"uv 프로젝트를 만들고, UGV가 스캔한 실제 복도의 라이다·컬러 데이터를 열어 로봇 경로를 그린 뒤, 건물을 BIM 설계와 비교합니다." },
+      tags:["uv init / add","open3d","pandas","IFC / BIM"],
+      files:[ { href:"point_cloud_lecture.pptx", en:"Slides", ko:"슬라이드" },
+              { href:"class_data.zip", en:"Data", ko:"데이터" } ] },
+    { week:"05", page:"week05.html", key:"week05.done", steps:8,
+      title:{ en:"Meshes: from points to surfaces", ko:"메시: 점에서 면으로" },
+      text:{ en:"Turn the corridor scan into a triangle mesh, compare Poisson, ball pivoting and alpha shapes, then measure floor area, wall paint and corridor width.",
+             ko:"복도 스캔을 삼각형 메시로 만들고 Poisson, Ball pivoting, Alpha shape 을 비교한 뒤, 바닥 넓이, 벽 페인트 양, 복도 폭을 측정합니다." },
+      tags:["triangle meshes","Poisson","ray casting","as-built vs design"],
+      files:[ { href:"class_data.zip", en:"Data", ko:"데이터" } ] }
+  ];
 
-  /* ---- language strings driven by JS ---- */
+  var KEY_THEME="setup.theme", KEY_LANG="setup.lang", lang="en";
   var STR={
-    copy:      { en:"copy",           ko:"복사" },
-    copied:    { en:"copied ✓",       ko:"복사됨 ✓" },
-    markDone:  { en:" Mark step done", ko:" 완료 표시" },
-    stepDone:  { en:" Step complete",  ko:" 완료됨" },
-    langBtn:   { en:"한국어",          ko:"EN" }
+    week:{ en:"Week", ko:"주차" },
+    open:{ en:"Open practical →", ko:"실습 열기 →" },
+    done:{ en:" steps done", ko:" 단계 완료" },
+    langBtn:{ en:"한국어", ko:"EN" }
   };
-  var CHEAT_CMT={
-    en:["# 1 · install VS Code (winget / brew / apt) — see step 1",
-        "# 2 · install Git + gh, log in, set your identity",
-        "# 3 · install uv",
-        "# 4 · install Python",
-        "# 5 · create + activate the virtual environment",
-        "# 6 · install &amp; launch Jupyter",
-        "# 7 · install PyTorch (NVIDIA GPU: add --index-url https://download.pytorch.org/whl/cu124)"],
-    ko:["# 1 · VS Code 설치 (winget / brew / apt) — 1단계 참고",
-        "# 2 · Git + gh 설치, 로그인, 신원 설정",
-        "# 3 · uv 설치",
-        "# 4 · Python 설치",
-        "# 5 · 가상 환경 생성 + 활성화",
-        "# 6 · Jupyter 설치 &amp; 실행",
-        "# 7 · PyTorch 설치 (NVIDIA GPU: --index-url https://download.pytorch.org/whl/cu124 추가)"]
-  };
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function doneCount(c){
+    try{ var d=JSON.parse(localStorage.getItem(c.key))||{}, n=0;
+      for(var k in d){ if(d[k]) n++; } return Math.min(n,c.steps); }catch(e){ return 0; }
+  }
 
-  /* ---- i18n: capture English HTML, swap on demand ---- */
+  function render(){
+    document.getElementById("classes").innerHTML=CLASSES.map(function(c){
+      var n=doneCount(c), pct=Math.round(n/c.steps*100);
+      var files=c.files.map(function(f){
+        return '<a class="btn" href="'+esc(f.href)+'" download><span aria-hidden="true">⬇</span>'+esc(f[lang])+'</a>';
+      }).join("");
+      return '<li class="card'+(n===c.steps?' complete':'')+'">'+
+        '<div class="wk-num">'+esc(STR.week[lang])+'<b>'+esc(c.week)+'</b></div>'+
+        '<div><h2><a href="'+esc(c.page)+'">'+esc(c.title[lang])+'</a></h2>'+
+        '<p>'+esc(c.text[lang])+'</p>'+
+        '<ul class="chips">'+c.tags.map(function(t){ return '<li>'+esc(t)+'</li>'; }).join("")+'</ul>'+
+        '<div class="actions"><a class="btn primary" href="'+esc(c.page)+'">'+esc(STR.open[lang])+'</a>'+files+
+        '<span class="progress"><span class="progress-bar"><span style="width:'+pct+'%"></span></span>'+
+        '<span class="progress-txt">'+n+' / '+c.steps+esc(STR.done[lang])+'</span></span></div></div></li>';
+    }).join("");
+  }
+
+  /* ---- i18n ---- */
   var i18nEls=document.querySelectorAll(".i18n");
   i18nEls.forEach(function(el){ el._en=el.innerHTML; });
   function applyLang(l){
@@ -615,136 +218,28 @@ git config --global user.email "you@example.com"</code></pre>
       var ko=el.getAttribute("data-ko");
       el.innerHTML=(lang==="ko"&&ko!=null)?ko:el._en;
     });
-    document.querySelectorAll(".copy").forEach(function(b){
-      if(!b.classList.contains("copied")) b.textContent=STR.copy[lang];
-    });
     document.getElementById("langBtn").textContent=STR.langBtn[lang];
-    renderCheat(currentOS);
-    refresh();
+    render();
     try{ localStorage.setItem(KEY_LANG, lang); }catch(e){}
   }
+  document.getElementById("langBtn").addEventListener("click", function(){ applyLang(lang==="ko"?"en":"ko"); });
 
-  /* ---- OS switching ---- */
-  var currentOS="win-cmd";
-  var buttons=document.querySelectorAll(".seg button");
-  function applyOS(os){
-    currentOS=os;
-    document.querySelectorAll("[data-os]").forEach(function(el){
-      var list=el.getAttribute("data-os").split(/\s+/);
-      el.classList.toggle("os-on", list.indexOf(os)!==-1);
-    });
-    buttons.forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.set===os?"true":"false"); });
-    renderCheat(os);
-    try{ localStorage.setItem(KEY_OS, os); }catch(e){}
-  }
-  buttons.forEach(function(b){ b.addEventListener("click", function(){ applyOS(b.dataset.set); }); });
-
-  /* ---- cheat sheet (per-OS, per-lang) ---- */
-  function cheatFor(os){
-    var activate = {
-      "win-cmd":".venv\\Scripts\\activate.bat",
-      "win-ps":".venv\\Scripts\\Activate.ps1",
-      "mac":"source .venv/bin/activate",
-      "linux":"source .venv/bin/activate"
-    }[os];
-    var uv = (os==="mac"||os==="linux")
-      ? "curl -LsSf https://astral.sh/uv/install.sh | sh"
-      : "powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\"";
-    var git = {
-      "win-cmd":"winget install --id Git.Git -e",
-      "win-ps":"winget install --id Git.Git -e",
-      "mac":"brew install git",
-      "linux":"sudo apt update && sudo apt install -y git"
-    }[os];
-    var gh = {
-      "win-cmd":"winget install --id GitHub.cli -e",
-      "win-ps":"winget install --id GitHub.cli -e",
-      "mac":"brew install gh",
-      "linux":"sudo apt update && sudo apt install -y gh"
-    }[os];
-    var c=CHEAT_CMT[lang], L=[];
-    L.push("<span class='cmt'>"+c[0]+"</span>");
-    L.push("<span class='cmt'>"+c[1]+"</span>");
-    L.push(git);
-    L.push(gh);
-    L.push("gh auth login");
-    L.push("git config --global user.name \"Your Name\"");
-    L.push("git config --global user.email \"you@example.com\"");
-    L.push("<span class='cmt'>"+c[2]+"</span>");
-    L.push(uv);
-    L.push("<span class='cmt'>"+c[3]+"</span>");
-    L.push("uv python install 3.12");
-    L.push("<span class='cmt'>"+c[4]+"</span>");
-    L.push("uv venv");
-    L.push(activate);
-    L.push("<span class='cmt'>"+c[5]+"</span>");
-    L.push("uv pip install jupyter ipykernel");
-    L.push("python -m ipykernel install --user --name=project-venv --display-name \"Python (project-venv)\"");
-    L.push("jupyter notebook");
-    L.push("<span class='cmt'>"+c[6]+"</span>");
-    L.push("uv pip install torch torchvision");
-    return L.join("\n");
-  }
-  var tagText={ "win-cmd":"Windows · cmd","win-ps":"Windows · PowerShell","mac":"macOS","linux":"Linux" };
-  function renderCheat(os){
-    document.getElementById("cheatCode").innerHTML=cheatFor(os);
-    document.getElementById("cheatTag").textContent=tagText[os];
-  }
-
-  /* ---- copy buttons ---- */
-  document.addEventListener("click", function(e){
-    var btn=e.target.closest(".copy"); if(!btn) return;
-    var code=btn.closest(".code").querySelector("pre code");
-    var text=code.innerText;
-    function ok(){ btn.classList.add("copied"); var o=STR.copy[lang]; btn.textContent=STR.copied[lang];
-      setTimeout(function(){ btn.classList.remove("copied"); btn.textContent=o; },1400); }
-    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(ok,ok); }
-    else { try{ var t=document.createElement("textarea"); t.value=text; document.body.appendChild(t);
-      t.select(); document.execCommand("copy"); document.body.removeChild(t); ok(); }catch(e){} }
-  });
-
-  /* ---- done tracking + progress ---- */
-  var steps=["s1","s2","s3","s4","s5","s6","s7"], done={};
-  try{ done=JSON.parse(localStorage.getItem(KEY_DONE))||{}; }catch(e){ done={}; }
-  function saveDone(){ try{ localStorage.setItem(KEY_DONE, JSON.stringify(done)); }catch(e){} }
-  function refresh(){
-    var n=0;
-    steps.forEach(function(id){
-      var el=document.getElementById(id);
-      if(done[id]){ el.classList.add("done"); n++; } else { el.classList.remove("done"); }
-      var b=el.querySelector(".done-btn .box");
-      if(b) b.textContent = done[id] ? "✓" : "";
-      var lbl=el.querySelector(".done-btn .done-label");
-      if(lbl) lbl.textContent = done[id] ? STR.stepDone[lang] : STR.markDone[lang];
-    });
-    document.getElementById("pfill").style.width=(n/steps.length*100)+"%";
-  }
-  document.querySelectorAll(".done-btn").forEach(function(b){
-    b.addEventListener("click", function(){ var id=b.dataset.done; done[id]=!done[id]; saveDone(); refresh(); });
-  });
-
-  /* ---- theme toggle ---- */
-  var root=document.documentElement, tb=document.getElementById("themeBtn");
+  /* ---- theme ---- */
+  var root=document.documentElement;
   try{ var st=localStorage.getItem(KEY_THEME); if(st) root.setAttribute("data-theme",st); }catch(e){}
-  tb.addEventListener("click", function(){
+  document.getElementById("themeBtn").addEventListener("click", function(){
     var cur=root.getAttribute("data-theme");
     var mqDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
-    var next = cur ? (cur==="dark"?"light":"dark") : (mqDark?"light":"dark");
+    var next=cur ? (cur==="dark"?"light":"dark") : (mqDark?"light":"dark");
     root.setAttribute("data-theme",next);
     try{ localStorage.setItem(KEY_THEME,next); }catch(e){}
   });
 
-  /* ---- language toggle ---- */
-  document.getElementById("langBtn").addEventListener("click", function(){
-    applyLang(lang==="ko"?"en":"ko");
-  });
+  /* refresh progress when coming back to this tab */
+  window.addEventListener("pageshow", render);
 
-  /* ---- init ---- */
-  var savedOS="win-cmd";
-  try{ savedOS=localStorage.getItem(KEY_OS)||"win-cmd"; }catch(e){}
   var savedLang="en";
   try{ savedLang=localStorage.getItem(KEY_LANG)||"en"; }catch(e){}
-  applyOS(savedOS);
   applyLang(savedLang);
 })();
 </script>
