@@ -1,0 +1,1119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mesh Measuring Lab</title>
+<meta name="description" content="Week 5 practical: turn the robot's corridor scan into a triangle mesh with Open3D, compare Poisson, ball pivoting and alpha shapes, then measure floor area, wall area and corridor width.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+  :root{
+    --bg:#e9ecec; --surface:#ffffff; --surface-2:#f3f6f6;
+    --ink:#152220; --muted:#576560; --faint:#8a9793;
+    --border:#d6dedc; --border-strong:#c2cccb;
+    --accent:#0e7b7b; --accent-ink:#0a5c5c; --accent-wash:#e3f0ef;
+    --warn:#a85808; --warn-bg:#fbf1e4; --warn-border:#efd6b3;
+    --ok:#137a48; --ok-bg:#e8f4ec; --ok-border:#bfe1cb;
+    --code-bg:#0e1a19; --code-surface:#152625; --code-ink:#d6e4e1;
+    --code-muted:#7f938f; --code-prompt:#3fb7ac; --code-border:#233634;
+    --shadow:0 1px 2px rgba(20,40,38,.05),0 8px 24px -14px rgba(20,40,38,.22);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1211; --surface:#111a19; --surface-2:#16211f;
+      --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
+      --border:#22302e; --border-strong:#2d3d3a;
+      --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
+      --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
+      --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
+      --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
+      --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1211; --surface:#111a19; --surface-2:#16211f;
+    --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
+    --border:#22302e; --border-strong:#2d3d3a;
+    --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
+    --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
+    --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
+    --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
+    --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+    font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  html[lang="ko"] body{
+    font-family:"IBM Plex Sans","Noto Sans KR",ui-sans-serif,system-ui,sans-serif;
+  }
+  .wrap{max-width:940px;margin:0 auto;padding:0 24px}
+
+  /* progress bar */
+  .progress-bar{position:sticky;top:0;z-index:40;height:4px;background:transparent}
+  .progress-fill{height:100%;width:0;background:var(--accent);transition:width .35s ease}
+
+  /* header */
+  header{padding:56px 0 30px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent-ink);font-weight:600;margin:0 0 14px}
+  h1{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;
+    font-size:clamp(2.3rem,6vw,3.6rem);line-height:1.02;letter-spacing:-.02em;
+    margin:0 0 16px;text-wrap:balance}
+  .lede{font-size:1.12rem;color:var(--muted);max-width:60ch;margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:22px;
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--faint)}
+  .meta b{color:var(--muted);font-weight:600}
+  .slides-btn{display:inline-flex;align-items:center;gap:8px;margin-top:22px;
+    padding:10px 18px;background:var(--accent);color:#fff;font-weight:600;font-size:14px;
+    text-decoration:none;border-radius:8px;box-shadow:var(--shadow);
+    transition:background .2s,transform .1s}
+  .slides-btn:hover{background:var(--accent-ink)}
+  .slides-btn:active{transform:translateY(1px)}
+
+  /* sticky OS control */
+  .controls{position:sticky;top:4px;z-index:30;background:var(--bg);
+    padding:14px 0 12px;margin-bottom:8px;
+    border-bottom:1px solid var(--border)}
+  .controls-inner{display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between}
+  .os-label{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint);font-weight:600}
+  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:11px;padding:3px;gap:2px;flex-wrap:wrap}
+  .seg button{font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;font-weight:500;
+    color:var(--muted);background:transparent;border:0;padding:7px 13px;border-radius:8px;
+    cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+  .seg button:hover{color:var(--ink)}
+  .seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent-ink);
+    box-shadow:var(--shadow);font-weight:600}
+  .util{display:flex;align-items:center;gap:8px}
+  .theme-toggle,.lang-toggle{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:9px;
+    padding:8px 12px;cursor:pointer;transition:color .15s,border-color .15s}
+  .theme-toggle:hover,.lang-toggle:hover{color:var(--ink);border-color:var(--border-strong)}
+  .lang-toggle{font-weight:600;min-width:64px}
+  html[lang="ko"] .lang-toggle,html[lang="ko"] .os-label,html[lang="ko"] .eyebrow,
+  html[lang="ko"] .meta,html[lang="ko"] .code-tag{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
+
+  /* steps */
+  main{padding:20px 0 40px;counter-reset:step}
+  .step{display:grid;grid-template-columns:52px 1fr;gap:22px;
+    padding:30px 0;border-top:1px solid var(--border)}
+  .step:first-of-type{border-top:0}
+  .stepnum{position:relative}
+  .stepnum .dot{position:sticky;top:82px;width:52px;height:52px;border-radius:14px;
+    background:var(--surface);border:1.5px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;
+    font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:1.35rem;
+    color:var(--accent-ink);box-shadow:var(--shadow);transition:background .2s,border-color .2s,color .2s}
+  .step.done .stepnum .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+  .step.done .stepnum .dot::after{content:"✓";font-size:1.5rem}
+  .step.done .stepnum .dot span{display:none}
+  .step-body h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;
+    font-size:1.5rem;letter-spacing:-.01em;margin:2px 0 6px;text-wrap:balance}
+  .step-body p{margin:0 0 14px;color:var(--muted)}
+  .step-body p strong{color:var(--ink);font-weight:600}
+  .inline-link{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-wash);
+    font-weight:500}
+  .inline-link:hover{border-bottom-color:var(--accent)}
+  code.ic{font-family:"IBM Plex Mono",monospace;font-size:.86em;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:5px;
+    padding:1px 5px;color:var(--accent-ink)}
+
+  /* code block */
+  .code{background:var(--code-bg);border:1px solid var(--code-border);border-radius:12px;
+    overflow:hidden;margin:0 0 16px;box-shadow:var(--shadow)}
+  .code-head{display:flex;align-items:center;justify-content:space-between;
+    padding:8px 12px 8px 14px;background:var(--code-surface);border-bottom:1px solid var(--code-border)}
+  .code-tag{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--code-muted);font-weight:500}
+  .copy{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--code-muted);
+    background:transparent;border:1px solid var(--code-border);border-radius:7px;
+    padding:5px 10px;cursor:pointer;transition:color .15s,border-color .15s}
+  .copy:hover{color:var(--code-ink);border-color:var(--code-muted)}
+  .copy.copied{color:var(--code-prompt);border-color:var(--code-prompt)}
+  pre{margin:0;padding:14px 16px;overflow-x:auto}
+  pre code{font-family:"IBM Plex Mono",monospace;font-size:13.5px;line-height:1.7;
+    color:var(--code-ink);white-space:pre;display:block}
+  pre .cmt{color:var(--code-muted)}
+  pre .pr{color:var(--code-prompt);user-select:none}
+
+  /* os-specific visibility */
+  [data-os]{display:none}
+  [data-os].os-on{display:block}
+
+  /* callouts */
+  .callout{border-radius:12px;padding:16px 18px;margin:0 0 16px;border:1px solid;
+    display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start}
+  .callout .ci{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;
+    width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center}
+  .callout p{margin:0 0 8px}
+  .callout p:last-child{margin:0}
+  .callout .ct{font-weight:600;display:block;margin-bottom:3px}
+  .verify{background:var(--ok-bg);border-color:var(--ok-border)}
+  .verify .ci{background:var(--ok);color:#fff}
+  .verify .ct{color:var(--ok)}
+  .verify code.ic{background:transparent;border-color:var(--ok-border);color:var(--ok)}
+  .warn{background:var(--warn-bg);border-color:var(--warn-border)}
+  .warn .ci{background:var(--warn);color:#fff}
+  .warn .ct{color:var(--warn)}
+  .warn code.ic{background:transparent;border-color:var(--warn-border);color:var(--warn)}
+  .tip{background:var(--accent-wash);border-color:var(--border)}
+  .tip .ci{background:var(--accent);color:#fff}
+  .tip .ct{color:var(--accent-ink)}
+
+  /* lists (exercise) */
+  .step-body ol,.step-body ul{margin:0 0 16px;padding-left:22px}
+  .step-body li{margin:4px 0}
+  .step-body li ul{margin:4px 0 0}
+
+  /* done toggle */
+  .done-row{margin-top:6px}
+  .done-btn{display:inline-flex;align-items:center;gap:10px;
+    font-family:"IBM Plex Sans",sans-serif;font-size:14px;font-weight:500;color:var(--muted);
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:9px 15px;cursor:pointer;transition:color .15s,border-color .15s,background .15s}
+  .done-btn:hover{border-color:var(--border-strong);color:var(--ink)}
+  .done-btn .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;font-size:12px;transition:background .15s,border-color .15s}
+  .step.done .done-btn{color:var(--ok);border-color:var(--ok-border);background:var(--ok-bg)}
+  .step.done .done-btn .box{background:var(--ok);border-color:var(--ok);color:#fff}
+
+  /* cheat sheet */
+  .cheat{margin:12px 0 60px;border:1px solid var(--border);border-radius:16px;
+    background:var(--surface);padding:26px 26px 10px;box-shadow:var(--shadow)}
+  .cheat h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:1.4rem;
+    margin:0 0 4px;letter-spacing:-.01em}
+  .cheat p{color:var(--muted);margin:0 0 18px;font-size:.95rem}
+
+  footer{padding:20px 0 60px;border-top:1px solid var(--border);
+    color:var(--faint);font-family:"IBM Plex Mono",monospace;font-size:12px}
+  footer a{color:var(--accent-ink);text-decoration:none}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+  @media (max-width:620px){
+    .step{grid-template-columns:40px 1fr;gap:14px}
+    .stepnum .dot{width:40px;height:40px;font-size:1.05rem}
+    .stepnum .dot::after{font-size:1.15rem}
+    header{padding:40px 0 22px}
+  }
+
+  /* week 4 + 5 additions */
+  code.ic{overflow-wrap:anywhere}
+  .step-body{min-width:0}
+  .btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .btn-row .slides-btn{margin-top:0}
+  .ghost-btn{background:var(--surface);color:var(--accent-ink);border:1px solid var(--border)}
+  .ghost-btn:hover{background:var(--surface-2)}
+  .tree{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:4px 0;margin:0 0 16px;overflow-x:auto}
+  .tree table{width:100%;border-collapse:collapse;font-size:.92rem}
+  .tree td{padding:8px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+  .tree tr:first-child td{border-top:0}
+  .tree td:first-child{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--accent-ink);
+    white-space:nowrap;font-weight:500}
+  figure{margin:0 0 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    overflow:hidden;box-shadow:var(--shadow)}
+  figure img{display:block;width:100%;height:auto;background:#fff}
+  figcaption{padding:10px 14px;font-size:.88rem;color:var(--faint);border-top:1px solid var(--border)}
+  .fig-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 16px}
+  .fig-pair figure{margin:0}
+  .fig-pair img{aspect-ratio:4/3;object-fit:cover}
+  @media (max-width:620px){.fig-pair{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="progress-bar"><div class="progress-fill" id="pfill"></div></div>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow i18n" data-ko='스마트 시설 관리 - 실습 세션 · 5주차'>Smart Facility Management - Practical Session · Week 05 . (For any queries please feel free to reachout: mugojames254@skku.edu)</p>
+    <h1 class="i18n" data-ko='메시: 점에서 면으로, 그리고 건물 측정하기'>Meshes: From Points to Surfaces, Then Measure the Building</h1>
+    <p class="lede i18n" data-ko='4주차에는 복도를 수십만 개의 <strong>점</strong> 으로 보았습니다. 이번 주에는 그 점들을 이어 <strong>삼각형 면(메시)</strong> 을 만들고, 세 가지 재구성 방법을 비교한 뒤, 메시로 시설 관리자가 실제로 묻는 질문에 답합니다: 바닥은 몇 m² 인가? 페인트는 몇 리터 필요한가? 복도는 충분히 넓은가?'>In Week 4 we saw the corridor as hundreds of thousands of <strong>points</strong>. This week we join those points into <strong>triangles (a mesh)</strong>, compare three ways of doing it, and then use the mesh to answer questions a facility manager actually asks: how many m² of floor? How many litres of paint? Is the corridor wide enough?</p>
+    <div class="meta">
+      <span class="i18n" data-ko='<b>프로젝트</b> facility-scan (4주차)'><b>Project</b> facility-scan (Week 4)</span>
+      <span class="i18n" data-ko='<b>라이브러리</b> open3d · numpy · matplotlib'><b>Libraries</b> open3d · numpy · matplotlib</span>
+      <span class="i18n" data-ko='<b>새 개념</b> 정점 · 삼각형 · 법선 · Poisson · 광선 투사'><b>New ideas</b> vertices · triangles · normals · Poisson · ray casting</span>
+      <span class="i18n" data-ko='<b>데이터</b> 4주차와 같은 컬러 스캔'><b>Data</b> same colour scan as Week 4</span>
+    </div>
+    <div class="btn-row">
+      <a class="slides-btn" href="class_data.zip" download>
+        <span aria-hidden="true">⬇</span>
+        <span class="i18n" data-ko='수업 데이터 내려받기 (.zip, 16 MB)'>Download class data (.zip, 16 MB)</span>
+      </a>
+      <a class="slides-btn ghost-btn" href="week04.html">
+        <span aria-hidden="true">←</span>
+        <span class="i18n" data-ko='4주차: 포인트 클라우드'>Week 4: point clouds</span>
+      </a>
+    </div>
+  </header>
+</div>
+
+<div class="controls">
+  <div class="wrap controls-inner">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="os-label i18n" data-ko='사용 중인 시스템'>Your system</span>
+      <div class="seg" role="group" aria-label="Choose your operating system">
+        <button data-set="win-cmd" aria-pressed="true">Windows · cmd</button>
+        <button data-set="win-ps" aria-pressed="false">Windows · PowerShell</button>
+        <button data-set="mac" aria-pressed="false">macOS</button>
+        <button data-set="linux" aria-pressed="false">Linux</button>
+      </div>
+    </div>
+    <div class="util">
+      <button class="lang-toggle" id="langBtn" aria-label="Switch language">한국어</button>
+      <button class="theme-toggle" id="themeBtn" aria-label="Toggle color theme">◐ theme</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <main>
+
+    <!-- STEP 1 : BACK TO THE PROJECT -->
+    <section class="step" id="s1">
+      <div class="stepnum"><div class="dot"><span>1</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='4주차 프로젝트 다시 열기'>Open your Week 4 project again</h2>
+        <p class="i18n" data-ko='새 프로젝트는 만들지 않습니다. 4주차의 <code class="ic">facility-scan</code> 폴더에 이미 open3d와 수업 데이터가 들어 있으므로 그대로 이어서 씁니다. 프로젝트 폴더로 이동하세요:'>No new project this week. Your Week 4 <code class="ic">facility-scan</code> folder already has open3d and the class data, so we carry on in it. Move into the project folder:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템'>all systems</span><button class="copy">copy</button></div>
+          <pre><code>cd facility-scan</code></pre>
+        </div>
+        <p class="i18n" data-ko='가상 환경을 <strong>활성화</strong>하세요:'><strong>Activate</strong> the virtual environment:</p>
+        <div data-os="win-cmd" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · Command Prompt</span><button class="copy">copy</button></div>
+            <pre><code>.venv\Scripts\activate.bat</code></pre>
+          </div>
+        </div>
+        <div data-os="win-ps" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · PowerShell</span><button class="copy">copy</button></div>
+            <pre><code>.venv\Scripts\Activate.ps1</code></pre>
+          </div>
+        </div>
+        <div data-os="mac linux" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">macOS / Linux</span><button class="copy">copy</button></div>
+            <pre><code>source .venv/bin/activate</code></pre>
+          </div>
+        </div>
+        <p class="i18n" data-ko='라이브러리와 데이터가 모두 있는지 확인하세요:'>Check the libraries and the data are both there:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='동작 확인'>verify it works</span><button class="copy">copy</button></div>
+          <pre><code>python -c "import open3d as o3d; print(o3d.io.read_point_cloud('data/facility_scan_color.ply'))"</code></pre>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='<code class="ic">PointCloud with 660034 points.</code> 가 출력되어야 합니다.'>It should print <code class="ic">PointCloud with 660034 points.</code></p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <div class="ci">!</div>
+          <div><span class="ct i18n" data-ko='4주차를 놓쳤나요?'>Missed Week 4?</span>
+            <p class="i18n" data-ko='프로젝트를 새로 만들고 라이브러리를 추가하세요. 그다음 <a class="inline-link" href="week04.html#s5">4주차 5단계</a> 의 방법으로 수업 데이터를 프로젝트 안에 받으세요.'>Create the project and add the libraries, then download the class data into it as in <a class="inline-link" href="week04.html#s5">Week 4, step 5</a>.</p>
+          </div>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템 · 4주차를 놓친 경우만'>all systems · only if you missed Week 4</span><button class="copy">copy</button></div>
+<pre><code>uv init --python 3.12 --no-package facility-scan
+cd facility-scan
+uv add numpy pandas matplotlib open3d</code></pre>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s1"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 2 : WHAT IS A MESH -->
+    <section class="step" id="s2">
+      <div class="stepnum"><div class="dot"><span>2</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='메시란 무엇인가?'>What is a mesh?</h2>
+        <p class="i18n" data-ko='포인트 클라우드는 <strong>점만</strong> 있습니다. 점 사이는 비어 있어서 &quot;이 벽의 넓이는?&quot; 같은 질문에 답할 수 없습니다. <strong>메시</strong> 는 점(정점, vertex)에 더해 <strong>어느 세 점이 삼각형을 이루는지</strong> 를 저장합니다. 삼각형이 면을 만들기 때문에 넓이, 부피, 그리고 &quot;여기서 벽까지 몇 m?&quot; 를 계산할 수 있습니다.'>A point cloud is <strong>only points</strong>. The space between them is empty, so it can't answer "what is the area of this wall?". A <strong>mesh</strong> stores points (vertices) <strong>plus which three points form each triangle</strong>. The triangles make a surface, so we can compute area, volume and "how far is the wall from here?".</p>
+        <div class="tree">
+          <table>
+            <tr><td>vertices</td><td class="i18n" data-ko='모서리 점들의 위치 (N × 3 배열: x, y, z).'>Corner positions (an N × 3 array: x, y, z).</td></tr>
+            <tr><td>triangles</td><td class="i18n" data-ko='삼각형마다 정점 번호 3개 (M × 3 배열). 위치가 아니라 <strong>번호</strong> 입니다.'>Three vertex numbers per triangle (an M × 3 array). <strong>Numbers</strong>, not positions.</td></tr>
+            <tr><td>normals</td><td class="i18n" data-ko='각 삼각형(또는 정점)이 바라보는 방향. 바닥은 위, 벽은 옆.'>Which way each triangle (or vertex) faces. A floor faces up, a wall faces sideways.</td></tr>
+          </table>
+        </div>
+        <p class="i18n" data-ko='손으로 작은 메시를 만들어 봅시다. 새 파일 <code class="ic">mesh_basics.py</code> 를 만드세요:'>Let's build a tiny mesh by hand. Create a new file <code class="ic">mesh_basics.py</code>:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">mesh_basics.py</span><button class="copy">copy</button></div>
+<pre><code>import numpy as np
+import open3d as o3d
+
+<span class="cmt"># 1. A mesh made by hand: a 2 m x 1 m floor tile = 4 corners + 2 triangles</span>
+vertices = np.array([
+    [0, 0, 0],   <span class="cmt"># 0</span>
+    [2, 0, 0],   <span class="cmt"># 1</span>
+    [2, 1, 0],   <span class="cmt"># 2</span>
+    [0, 1, 0],   <span class="cmt"># 3</span>
+], dtype=float)
+triangles = np.array([
+    [0, 1, 2],   <span class="cmt"># first triangle uses corners 0, 1, 2</span>
+    [0, 2, 3],   <span class="cmt"># second triangle uses corners 0, 2, 3</span>
+])
+tile = o3d.geometry.TriangleMesh(
+    o3d.utility.Vector3dVector(vertices),
+    o3d.utility.Vector3iVector(triangles),
+)
+print(tile)
+print(f"Tile area      : {tile.get_surface_area():.2f} m²")
+
+<span class="cmt"># 2. A ready-made mesh: a 4 m x 3 m x 2.5 m room (a box)</span>
+room = o3d.geometry.TriangleMesh.create_box(width=4, height=3, depth=2.5)
+print(room)
+print(f"Room surface   : {room.get_surface_area():.2f} m²")
+print(f"Watertight?    : {room.is_watertight()}")
+print(f"Room volume    : {room.get_volume():.2f} m³")
+
+<span class="cmt"># 3. Show both. Press W in the window to see the triangles (wireframe)</span>
+room.compute_vertex_normals()
+room.paint_uniform_color([0.6, 0.8, 0.8])
+tile.paint_uniform_color([0.9, 0.5, 0.2])
+tile.translate([5, 0, 0])
+o3d.visualization.draw_geometries([room, tile], window_name="Mesh basics",
+                                  mesh_show_wireframe=True, mesh_show_back_face=True)</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='활성화된 .venv 안에서'>inside the active .venv</span><button class="copy">copy</button></div>
+          <pre><code>python mesh_basics.py</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='출력'>output</span><button class="copy">copy</button></div>
+<pre><code>TriangleMesh with 4 points and 2 triangles.
+Tile area      : 2.00 m²
+TriangleMesh with 8 points and 12 triangles.
+Room surface   : 59.00 m²
+Watertight?    : True
+Room volume    : 30.00 m³</code></pre>
+        </div>
+        <figure>
+          <img src="assets/week05_mesh_basics.jpg" alt="A teal box drawn with its triangle edges, next to an orange rectangle split into two triangles" loading="lazy" style="max-width:560px;margin:0 auto">
+          <figcaption class="i18n" data-ko='상자 &quot;방&quot; (삼각형 12개)과 바닥 타일 (삼각형 2개). 사각형 면 하나 = 삼각형 두 개.'>The box "room" (12 triangles) and the floor tile (2 triangles). Every square face is two triangles.</figcaption>
+        </figure>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='숫자 읽기'>Reading the numbers</span>
+            <p class="i18n" data-ko='상자의 면 6개 × 삼각형 2개 = <strong>12</strong>. 표면적 = 2×(4×3 + 4×2.5 + 3×2.5) = <strong>59 m²</strong>. 구멍이 없이 완전히 닫힌 메시를 <strong>watertight</strong> 라고 하며, 이런 메시만 부피를 계산할 수 있습니다. 4 × 3 × 2.5 = <strong>30 m³</strong>.'>6 box faces × 2 triangles = <strong>12</strong>. Surface = 2×(4×3 + 4×2.5 + 3×2.5) = <strong>59 m²</strong>. A mesh that is fully closed, with no holes, is <strong>watertight</strong>; only those have a volume: 4 × 3 × 2.5 = <strong>30 m³</strong>.</p>
+          </div>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <p class="i18n" data-ko='<code class="ic">triangles</code> 에서 두 번째 줄 <code class="ic">[0, 2, 3]</code> 을 지우고 다시 실행하세요. 타일 넓이는? 창에서 무엇이 보이나요?'>Delete the second row <code class="ic">[0, 2, 3]</code> from <code class="ic">triangles</code> and run again. What is the tile area now? What do you see in the window?</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s2"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 3 : PREPARE THE POINTS -->
+    <section class="step" id="s3">
+      <div class="stepnum"><div class="dot"><span>3</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='점 준비하기: 자르기, 줄이기, 정리하기, 법선'>Prepare the points: crop, thin, clean, normals</h2>
+        <p class="i18n" data-ko='메시를 만드는 알고리즘은 점이 많을수록 느려지고, 잡음에 약하며, <strong>법선</strong> (각 점에서 면이 바라보는 방향)이 필요합니다. 그래서 먼저 점을 준비합니다. 새 파일 <code class="ic">prepare_points.py</code>:'>Meshing algorithms get slow with many points, get confused by noise, and need <strong>normals</strong> (which way the surface faces at each point). So we prepare the points first. New file <code class="ic">prepare_points.py</code>:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">prepare_points.py</span><button class="copy">copy</button></div>
+<pre><code>import open3d as o3d
+
+pcd = o3d.io.read_point_cloud("data/facility_scan_color.ply")
+print(f"Full scan        : {len(pcd.points):,} points")
+
+<span class="cmt"># 1. Keep only the corridor (a box: min corner, max corner, in metres)</span>
+box = o3d.geometry.AxisAlignedBoundingBox([-1.7, -18.9, -1.0], [2.9, 0.9, 3.0])
+pcd = pcd.crop(box)
+print(f"Corridor only    : {len(pcd.points):,} points")
+
+<span class="cmt"># 2. Thin it out: keep one point per 8 cm cube (faster meshing)</span>
+pcd = pcd.voxel_down_sample(voxel_size=0.08)
+print(f"After thinning   : {len(pcd.points):,} points")
+
+<span class="cmt"># 3. Remove stray points that float far from their neighbours</span>
+pcd, kept = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
+print(f"After cleaning   : {len(pcd.points):,} points")
+
+<span class="cmt"># 4. Normals: which way each little patch of surface is facing</span>
+pcd.estimate_normals(o3d.geometry.KDTreeSearchParamHybrid(radius=0.25, max_nn=30))
+pcd.orient_normals_consistent_tangent_plane(15)
+
+o3d.io.write_point_cloud("corridor_points.ply", pcd)
+print("Saved corridor_points.ply")
+
+<span class="cmt"># Press N in the window to show the normals as little lines</span>
+o3d.visualization.draw_geometries([pcd], window_name="Corridor points + normals")</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='활성화된 .venv 안에서'>inside the active .venv</span><button class="copy">copy</button></div>
+          <pre><code>python prepare_points.py</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='출력'>output</span><button class="copy">copy</button></div>
+<pre><code>Full scan        : 660,034 points
+Corridor only    : 427,516 points
+After thinning   : 145,113 points
+After cleaning   : 140,760 points
+Saved corridor_points.ply</code></pre>
+        </div>
+        <div class="tree">
+          <table>
+            <tr><td>crop</td><td class="i18n" data-ko='복도 주변 상자만 남깁니다. 다른 방과 계단 너머는 버립니다.'>Keep a box around the corridor; drop the other rooms and the space past the stairs.</td></tr>
+            <tr><td>voxel_down_sample</td><td class="i18n" data-ko='8 cm 정육면체마다 점 하나만 남깁니다 → 점 수가 약 1/3.'>Keep one point per 8 cm cube → about a third of the points.</td></tr>
+            <tr><td>remove_statistical_outlier</td><td class="i18n" data-ko='이웃 20개와의 평균 거리가 유난히 큰 점(공중에 뜬 잡음)을 지웁니다.'>Delete points whose average distance to their 20 neighbours is unusually large (noise floating in the air).</td></tr>
+            <tr><td>estimate_normals</td><td class="i18n" data-ko='반경 25 cm 안의 이웃 점들에 작은 평면을 맞춰 방향을 구합니다.'>Fit a tiny plane to the neighbours within 25 cm to get the direction.</td></tr>
+            <tr><td>orient_normals_…</td><td class="i18n" data-ko='모든 법선이 서로 일관된 쪽을 보도록 뒤집어 맞춥니다.'>Flip normals so they all point to a consistent side.</td></tr>
+          </table>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <p class="i18n" data-ko='창에서 확대한 뒤 <strong>N</strong> 키를 눌러 법선을 보세요. 바닥의 법선은 어느 쪽을 가리키나요? 벽은요?'>In the window, zoom in and press <strong>N</strong> to show the normals. Which way do the floor normals point? And the walls?</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s3"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 4 : POISSON -->
+    <section class="step" id="s4">
+      <div class="stepnum"><div class="dot"><span>4</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='첫 메시: Poisson 재구성'>Your first mesh: Poisson reconstruction</h2>
+        <p class="i18n" data-ko='<strong>Poisson 재구성</strong> 은 점과 법선을 보고 &quot;안&quot; 과 &quot;밖&quot; 을 나누는 매끈한 면 하나를 찾습니다. 장점: 구멍이 거의 없습니다. 단점: 점이 없는 곳에도 면을 <strong>지어냅니다</strong>. 그래서 각 정점에 <strong>density</strong> (근처에 실제 점이 얼마나 있었나)를 함께 돌려주고, 우리는 그것으로 지어낸 부분을 잘라냅니다. 새 파일 <code class="ic">mesh_poisson.py</code>:'><strong>Poisson reconstruction</strong> looks at the points and normals and finds one smooth surface that separates "inside" from "outside". Good: almost no holes. Bad: it <strong>invents</strong> surface where there were no points. So it also returns a <strong>density</strong> per vertex (how many real points were nearby), and we use that to cut the invented parts away. New file <code class="ic">mesh_poisson.py</code>:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">mesh_poisson.py</span><button class="copy">copy</button></div>
+<pre><code>import time
+import numpy as np
+import matplotlib.pyplot as plt
+import open3d as o3d
+
+pcd = o3d.io.read_point_cloud("corridor_points.ply")
+
+<span class="cmt"># 1. Poisson reconstruction: fit one smooth surface through all the points</span>
+t0 = time.time()
+mesh, density = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=8)
+density = np.asarray(density)
+mesh.compute_vertex_normals()
+print(f"Poisson mesh     : {len(mesh.triangles):,} triangles in {time.time() - t0:.1f} s")
+
+<span class="cmt"># Cut off everything above z = 1.2 m (ceiling + upper walls) so we can look inside</span>
+no_ceiling = o3d.geometry.AxisAlignedBoundingBox([-5, -25, -2], [5, 5, 1.2])
+
+<span class="cmt"># 2. Look at a copy coloured by density: dark blue = few scan points nearby (surface was guessed)</span>
+look = o3d.geometry.TriangleMesh(mesh)
+d01 = (density - density.min()) / (density.max() - density.min())
+look.vertex_colors = o3d.utility.Vector3dVector(plt.cm.viridis(d01)[:, :3])
+o3d.visualization.draw_geometries([look.crop(no_ceiling)], window_name="Poisson — coloured by density",
+                                  mesh_show_back_face=True)
+
+<span class="cmt"># 3. Trim: delete the 5 % of vertices with the lowest density, keep only the corridor box</span>
+mesh.remove_vertices_by_mask(density &lt; np.quantile(density, 0.05))
+mesh = mesh.crop(pcd.get_axis_aligned_bounding_box())
+print(f"After trimming   : {len(mesh.triangles):,} triangles")
+
+o3d.io.write_triangle_mesh("corridor_poisson.ply", mesh)
+print("Saved corridor_poisson.ply")
+o3d.visualization.draw_geometries([mesh.crop(no_ceiling)], window_name="Poisson mesh (trimmed)",
+                                  mesh_show_back_face=True)</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='활성화된 .venv 안에서'>inside the active .venv</span><button class="copy">copy</button></div>
+          <pre><code>python mesh_poisson.py</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='출력 (시간과 개수는 조금 다를 수 있음)'>output (times and counts may differ a little)</span><button class="copy">copy</button></div>
+<pre><code>Poisson mesh     : 165,374 triangles in 3.4 s
+After trimming   : 155,588 triangles
+Saved corridor_poisson.ply</code></pre>
+        </div>
+        <p class="i18n" data-ko='창이 두 번 열립니다. 첫 번째 창을 닫으면 두 번째가 열립니다. 둘 다 <strong>천장을 잘라낸</strong> 모습이라 위에서 복도 안을 들여다볼 수 있습니다.'>Two windows open, one after the other (close the first to see the second). Both have the <strong>ceiling cut off</strong>, so you can look down into the corridor.</p>
+        <figure>
+          <img src="assets/week05_poisson_density.jpg" alt="Top view of the Poisson mesh coloured yellow where scan points were dense and dark blue at the open end where the surface was guessed" loading="lazy">
+          <figcaption class="i18n" data-ko='① density 색: 노랑 = 실제 점이 많음, 진한 파랑 = Poisson이 지어낸 면 (왼쪽 끝 계단 쪽).'>① Coloured by density: yellow = many real points, dark blue = surface Poisson invented (the open end by the stairs, left).</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/week05_poisson_mesh.jpg" alt="Top view of the trimmed Poisson mesh in real colours: light terrazzo floor between darker walls and shelving" loading="lazy">
+          <figcaption class="i18n" data-ko='② 하위 5 % 를 잘라낸 메시. 색은 스캔에서 그대로 옮겨졌습니다: 가운데 밝은 테라조 바닥, 양옆으로 선반과 목재 패널.'>② The mesh after trimming the lowest 5 %. Colours come straight from the scan: the light terrazzo floor in the middle, shelving and timber panels along the sides.</figcaption>
+        </figure>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='depth 는 해상도'>depth is the resolution</span>
+            <p class="i18n" data-ko='Poisson은 공간을 2<sup>depth</sup> 칸으로 나눕니다. 이 복도(약 20 m)에서 <code class="ic">depth=8</code> → 256칸 → 약 8 cm, 점 간격과 같습니다. depth를 1 올리면 칸이 절반이 되고 삼각형은 약 4~6배가 됩니다.'>Poisson splits space into 2<sup>depth</sup> cells per side. For this ~20 m corridor, <code class="ic">depth=8</code> → 256 cells → about 8 cm, the same as our point spacing. Each +1 halves the cell size and gives roughly 4–6× more triangles.</p>
+          </div>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <p class="i18n" data-ko='<code class="ic">depth=9</code> 로 바꿔 실행해 보세요. 삼각형 수, 시간, 파일 크기는 어떻게 변하나요? 더 좋아 보이나요? (확인 후 <code class="ic">8</code> 로 되돌리세요 — 다음 단계들은 depth 8 메시를 기준으로 합니다.)'>Change to <code class="ic">depth=9</code> and run it. What happens to the triangle count, the time and the file size? Does it look better? (Change it back to <code class="ic">8</code> afterwards — the next steps assume the depth-8 mesh.)</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s4"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 5 : COMPARE METHODS -->
+    <section class="step" id="s5">
+      <div class="stepnum"><div class="dot"><span>5</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='세 가지 방법 비교하기'>Compare three methods</h2>
+        <p class="i18n" data-ko='같은 점으로 다른 두 알고리즘도 실행해 Poisson과 나란히 놓고 봅니다.'>Run two other algorithms on the same points and put them next to Poisson.</p>
+        <div class="tree">
+          <table>
+            <tr><td>Poisson</td><td class="i18n" data-ko='매끈한 면 하나를 맞춤. 구멍이 거의 없지만, 없는 면을 지어낼 수 있음.'>Fits one smooth surface. Few holes, but may invent surface that isn't there.</td></tr>
+            <tr><td>Ball pivoting</td><td class="i18n" data-ko='점 위로 공을 굴려 공이 동시에 닿는 세 점을 삼각형으로 이음. 실제 점만 사용하지만, 점이 드문 곳은 구멍.'>Rolls a ball over the points and joins every three points it touches at once. Uses only real points, but leaves holes where points are sparse.</td></tr>
+            <tr><td>Alpha shape</td><td class="i18n" data-ko='점들을 감싸고 alpha 보다 작은 삼각형만 남김. 빠르지만 거칠고, 얇은 벽은 양면이 생김.'>Wraps the points and keeps only triangles smaller than alpha. Fast but rough, and thin walls get wrapped on both sides.</td></tr>
+          </table>
+        </div>
+        <p class="i18n" data-ko='새 파일 <code class="ic">mesh_compare.py</code>:'>New file <code class="ic">mesh_compare.py</code>:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">mesh_compare.py</span><button class="copy">copy</button></div>
+<pre><code>import time
+import open3d as o3d
+
+pcd = o3d.io.read_point_cloud("corridor_points.ply")
+
+def open_edges(mesh):
+    """Edges used by only one triangle = the border of a hole."""
+    all_bad = mesh.get_non_manifold_edges(allow_boundary_edges=False)
+    not_border = mesh.get_non_manifold_edges(allow_boundary_edges=True)
+    return len(all_bad) - len(not_border)
+
+results = {}
+
+<span class="cmt"># A. Poisson (made in the last step)</span>
+results["Poisson"] = (o3d.io.read_triangle_mesh("corridor_poisson.ply"), None)
+
+<span class="cmt"># B. Ball pivoting: roll a ball over the points, join every 3 points it touches</span>
+t0 = time.time()
+radii = o3d.utility.DoubleVector([0.12, 0.24])
+bpa = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(pcd, radii)
+results["Ball pivoting"] = (bpa, time.time() - t0)
+
+<span class="cmt"># C. Alpha shape: wrap the points, keep triangles smaller than alpha</span>
+t0 = time.time()
+alpha = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(pcd, alpha=0.24)
+results["Alpha shape"] = (alpha, time.time() - t0)
+
+print(f"{'method':&lt;15}{'triangles':&gt;11}{'seconds':&gt;9}{'area m²':&gt;10}{'open edges':&gt;12}")
+for name, (mesh, secs) in results.items():
+    secs = "-" if secs is None else f"{secs:.1f}"
+    print(f"{name:&lt;15}{len(mesh.triangles):&gt;11,}{secs:&gt;9}"
+          f"{mesh.get_surface_area():&gt;10.1f}{open_edges(mesh):&gt;12,}")
+
+o3d.io.write_triangle_mesh("corridor_bpa.ply", bpa)
+
+<span class="cmt"># Show all three one above the other (6 m apart), ceiling cut off so we can look inside</span>
+no_ceiling = o3d.geometry.AxisAlignedBoundingBox([-5, -25, -2], [5, 5, 1.2])
+shown = []
+for i, (mesh, _) in enumerate(results.values()):
+    m = mesh.crop(no_ceiling).translate([-6 * i, 0, 0])
+    m.compute_vertex_normals()
+    shown.append(m)
+o3d.visualization.draw_geometries(shown, window_name="Poisson | Ball pivoting | Alpha shape",
+                                  mesh_show_back_face=True)</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='활성화된 .venv 안에서 · 약 20~60초'>inside the active .venv · about 20–60 s</span><button class="copy">copy</button></div>
+          <pre><code>python mesh_compare.py</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='출력'>output</span><button class="copy">copy</button></div>
+<pre><code>method           triangles  seconds   area m²  open edges
+Poisson            155,588        -     395.4       1,158
+Ball pivoting       63,836     14.0     252.2       7,734
+Alpha shape         60,024      3.0     354.8           0</code></pre>
+        </div>
+        <figure>
+          <img src="assets/week05_compare.jpg" alt="Three top views of the corridor mesh stacked: Poisson on top, ball pivoting in the middle, alpha shape at the bottom" loading="lazy">
+          <figcaption class="i18n" data-ko='위: Poisson · 가운데: Ball pivoting · 아래: Alpha shape (천장 제거).'>Top: Poisson · middle: ball pivoting · bottom: alpha shape (ceiling removed).</figcaption>
+        </figure>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='같은 복도인데 넓이가 왜 다를까?'>Same corridor — why different areas?</span>
+            <p class="i18n" data-ko='<strong>open edges</strong> 는 삼각형 하나만 쓰는 모서리, 즉 구멍의 테두리입니다. Ball pivoting은 구멍이 가장 많아(7,734) 넓이가 가장 작습니다. Alpha shape은 구멍이 0개지만 얇은 것을 양쪽에서 감싸서 넓이가 부풀었습니다. Poisson은 그 사이입니다. <strong>&quot;어떤 숫자가 맞나?&quot;</strong> 는 8단계 연습 문제에서 설계도와 비교해 답합니다.'><strong>Open edges</strong> are edges used by only one triangle: the rim of a hole. Ball pivoting has the most holes (7,734), so the smallest area. Alpha shape has zero holes but wraps thin things from both sides, so its area is inflated. Poisson sits in between. <strong>"Which number is right?"</strong> — you answer that against the design in the step 8 exercise.</p>
+          </div>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기 — 메시 단순화'>Try it yourself — simplify a mesh</span>
+            <p class="i18n" data-ko='웹 뷰어나 게임 엔진에 올리려면 삼각형이 적어야 합니다. 스크립트 끝에 아래를 추가해 Poisson 메시를 20,000개로 줄여 보세요. 넓이는 얼마나 변하나요?'>Web viewers and game engines need fewer triangles. Add this to the end of the script to cut the Poisson mesh down to 20,000 triangles. How much does the area change?</p>
+          </div>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='mesh_compare.py 끝에 추가'>add to the end of mesh_compare.py</span><button class="copy">copy</button></div>
+<pre><code>small = results["Poisson"][0].simplify_quadric_decimation(target_number_of_triangles=20000)
+print(f"Simplified       : {len(small.triangles):,} triangles, {small.get_surface_area():.1f} m²")
+o3d.io.write_triangle_mesh("corridor_small.obj", small)</code></pre>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s5"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 6 : MEASURE AREAS -->
+    <section class="step" id="s6">
+      <div class="stepnum"><div class="dot"><span>6</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='건물 측정 ①: 바닥, 벽, 천장 넓이'>Measure the building ①: floor, wall and ceiling area</h2>
+        <p class="i18n" data-ko='청소 업체는 <strong>바닥 m²</strong> 로, 도장 업체는 <strong>벽 m²</strong> 로 견적을 냅니다. 메시의 모든 삼각형은 넓이와 방향을 가지므로, 방향으로 분류해 더하기만 하면 됩니다:'>A cleaning company quotes per <strong>m² of floor</strong>; a painter quotes per <strong>m² of wall</strong>. Every triangle in the mesh has an area and a direction, so we only need to sort them by direction and add them up:</p>
+        <div class="tree">
+          <table>
+            <tr><td class="i18n" data-ko='넓이'>area</td><td class="i18n" data-ko='삼각형 ABC의 넓이 = ½ · |AB × AC| (두 변의 외적 길이의 절반).'>Area of triangle ABC = ½ · |AB × AC| (half the length of the cross product of two edges).</td></tr>
+            <tr><td class="i18n" data-ko='바닥 / 천장'>floor / ceiling</td><td class="i18n" data-ko='법선이 거의 수직 (|n<sub>z</sub>| &gt; 0.8). 낮으면 바닥, 높으면 천장.'>Normal nearly vertical (|n<sub>z</sub>| &gt; 0.8). Low = floor, high = ceiling.</td></tr>
+            <tr><td class="i18n" data-ko='벽'>wall</td><td class="i18n" data-ko='나머지 전부 (옆을 바라봄).'>Everything else (faces sideways).</td></tr>
+          </table>
+        </div>
+        <p class="i18n" data-ko='새 파일 <code class="ic">measure_areas.py</code>:'>New file <code class="ic">measure_areas.py</code>:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">measure_areas.py</span><button class="copy">copy</button></div>
+<pre><code>import numpy as np
+import open3d as o3d
+
+mesh = o3d.io.read_triangle_mesh("corridor_poisson.ply")
+mesh.compute_triangle_normals()
+
+v = np.asarray(mesh.vertices)            <span class="cmt"># corner positions   (N x 3)</span>
+t = np.asarray(mesh.triangles)           <span class="cmt"># 3 corner numbers per triangle (M x 3)</span>
+n = np.asarray(mesh.triangle_normals)    <span class="cmt"># which way each triangle faces (M x 3)</span>
+
+<span class="cmt"># 1. Area of every triangle = half the length of the cross product of two edges</span>
+a, b, c = v[t[:, 0]], v[t[:, 1]], v[t[:, 2]]
+area = 0.5 * np.linalg.norm(np.cross(b - a, c - a), axis=1)
+centre_z = (a[:, 2] + b[:, 2] + c[:, 2]) / 3
+print(f"Total surface    : {area.sum():6.1f} m²  (Open3D: {mesh.get_surface_area():.1f} m²)")
+
+<span class="cmt"># 2. Sort the triangles by the way they face</span>
+flat = np.abs(n[:, 2]) &gt; 0.8             <span class="cmt"># facing (almost) straight up or down</span>
+is_floor = flat &amp; (centre_z &lt; 0.8)       <span class="cmt"># the floor is near z = -0.5, the ceiling near z = 2</span>
+is_ceiling = flat &amp; (centre_z &gt;= 0.8)
+is_wall = ~flat                          <span class="cmt"># everything else faces sideways</span>
+
+floor_m2 = area[is_floor].sum()
+wall_m2 = area[is_wall].sum()
+ceiling_m2 = area[is_ceiling].sum()
+height = np.median(centre_z[is_ceiling]) - np.median(centre_z[is_floor])
+print(f"Floor            : {floor_m2:6.1f} m²")
+print(f"Walls            : {wall_m2:6.1f} m²")
+print(f"Ceiling          : {ceiling_m2:6.1f} m²")
+print(f"Room height      : {height:6.2f} m   (median ceiling z - median floor z)")
+
+<span class="cmt"># 3. A facility manager's quote: 2 coats of paint, 1 litre covers 10 m²</span>
+print(f"Wall paint       : {wall_m2 * 2 / 10:6.0f} litres")
+
+<span class="cmt"># 4. Show each class in its own colour (ceiling left out so we can look inside)</span>
+no_ceiling = o3d.geometry.AxisAlignedBoundingBox([-5, -25, -2], [5, 5, 1.2])
+
+def part(mask, colour):
+    p = o3d.geometry.TriangleMesh(mesh)
+    p.remove_triangles_by_mask(~mask)
+    p.remove_unreferenced_vertices()
+    p.compute_vertex_normals()
+    p.paint_uniform_color(colour)
+    return p.crop(no_ceiling)
+
+floor = part(is_floor, [0.20, 0.65, 0.35])     <span class="cmt"># green</span>
+walls = part(is_wall, [0.75, 0.75, 0.78])      <span class="cmt"># grey</span>
+ceiling = part(is_ceiling, [0.95, 0.55, 0.15]) <span class="cmt"># orange</span>
+o3d.visualization.draw_geometries([floor, walls], window_name="Floor (green) and walls (grey)",
+                                  mesh_show_back_face=True)</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='활성화된 .venv 안에서'>inside the active .venv</span><button class="copy">copy</button></div>
+          <pre><code>python measure_areas.py</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='출력'>output</span><button class="copy">copy</button></div>
+<pre><code>Total surface    :  395.4 m²  (Open3D: 395.4 m²)
+Floor            :   54.5 m²
+Walls            :  274.7 m²
+Ceiling          :   66.2 m²
+Room height      :   2.29 m   (median ceiling z - median floor z)
+Wall paint       :     55 litres</code></pre>
+        </div>
+        <figure>
+          <img src="assets/week05_areas.jpg" alt="Top view of the corridor mesh with floor triangles in green and wall triangles in grey" loading="lazy">
+          <figcaption class="i18n" data-ko='초록 = 바닥으로 분류된 삼각형, 회색 = 벽. 선반 윗면처럼 다른 수평면도 초록으로 나올 수 있습니다.'>Green = triangles classified as floor, grey = wall. Other flat surfaces, such as shelf tops, can also come out green.</figcaption>
+        </figure>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='숫자를 그대로 믿지 마세요'>Don't trust the numbers blindly</span>
+            <p class="i18n" data-ko='벽 274.7 m² 는 너무 큽니다. 이 복도 벽 길이는 약 28 m, 높이 약 2.5 m → 약 70 m² 입니다. 원인: 선반과 물건의 옆면, 계단과 옆 공간, 그리고 로봇 위치 추정의 작은 오차(드리프트)로 같은 벽이 겹쳐 두 번 찍힌 &quot;유령 벽&quot;. 스캔 메시로 측정할 때는 <strong>항상 다른 출처(설계도, 줄자)와 비교</strong> 해야 합니다.'>274.7 m² of wall is far too much: this corridor has about 28 m of wall, 2.5 m high → about 70 m². The extra comes from the sides of shelves and objects, the stairs and side spaces, and "ghost walls" where small errors in the robot's position (drift) recorded the same wall twice, slightly offset. When you measure from a scan mesh, <strong>always check against another source</strong> (the design, a tape measure).</p>
+          </div>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <p class="i18n" data-ko='① 마지막 줄의 목록에 <code class="ic">ceiling</code> 을 추가해 천장도 보세요. ② 파일을 <code class="ic">corridor_bpa.ply</code> 로 바꿔 Ball pivoting 메시도 측정해 보세요. 어떤 숫자가 가장 많이 변하나요?'>① Add <code class="ic">ceiling</code> to the list on the last line to see the ceiling too. ② Change the file to <code class="ic">corridor_bpa.ply</code> and measure the ball-pivoting mesh. Which number changes the most?</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s6"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 7 : RAY CASTING -->
+    <section class="step" id="s7">
+      <div class="stepnum"><div class="dot"><span>7</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='건물 측정 ②: 가상 줄자로 복도 폭 재기'>Measure the building ②: a virtual tape measure for corridor width</h2>
+        <p class="i18n" data-ko='화재 대피와 휠체어 통행을 위해 복도에는 최소 <strong>유효 폭</strong> 이 필요합니다 (예: 한국 장애인 편의시설 기준은 복도 유효폭 1.2 m 이상). 선반이나 물건이 놓이면 실제로 지나갈 수 있는 폭이 줄어듭니다. 메시가 있으면 <strong>광선(ray)</strong> 을 쏴서 처음 맞는 면까지의 거리를 잴 수 있습니다 — 점만으로는 광선이 점 사이로 빠져나가 버립니다. 복도를 따라 25 cm 마다 서서 왼쪽과 오른쪽으로 광선을 쏩니다. 새 파일 <code class="ic">measure_width.py</code>:'>For fire escape and wheelchair access, a corridor needs a minimum <strong>clear width</strong> (for example, Korea's barrier-free standard asks for at least 1.2 m). Shelves and stored items reduce the width people can actually pass through. With a mesh we can cast a <strong>ray</strong> and get the distance to the first surface it hits — with points only, the ray would slip through the gaps. We stand every 25 cm along the corridor and shoot one ray left and one right. New file <code class="ic">measure_width.py</code>:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">measure_width.py</span><button class="copy">copy</button></div>
+<pre><code>import numpy as np
+import matplotlib.pyplot as plt
+import open3d as o3d
+
+mesh = o3d.io.read_triangle_mesh("corridor_poisson.ply")
+
+<span class="cmt"># 1. Put the triangles in a ray-casting scene</span>
+scene = o3d.t.geometry.RaycastingScene()
+scene.add_triangles(o3d.t.geometry.TriangleMesh.from_legacy(mesh))
+
+<span class="cmt"># 2. Stand in the corridor (x = 0.2 m, z = 0.8 m) every 25 cm along it</span>
+ys = np.arange(-13.5, -2.5, 0.25)
+origins = np.column_stack([np.full_like(ys, 0.2), ys, np.full_like(ys, 0.8)])
+
+def shoot(direction):
+    """Cast one ray from every origin; return the distance to the first triangle hit."""
+    rays = np.hstack([origins, np.tile(direction, (len(ys), 1))]).astype(np.float32)
+    return scene.cast_rays(o3d.core.Tensor(rays))["t_hit"].numpy()   <span class="cmt"># inf = hit nothing</span>
+
+left = shoot([-1, 0, 0])
+right = shoot([1, 0, 0])
+width = left + right
+ok = np.isfinite(width)                  <span class="cmt"># skip spots where a ray escaped through a hole or door</span>
+
+<span class="cmt"># 3. Report</span>
+i = np.argmin(np.where(ok, width, np.inf))
+print(f"Measured spots   : {ok.sum()} of {len(ys)}")
+print(f"Median width     : {np.median(width[ok]):.2f} m")
+print(f"Narrowest        : {width[i]:.2f} m at y = {ys[i]:.2f} m")
+print(f"Spots under 1.2 m: {(width[ok] &lt; 1.2).sum()}")
+
+<span class="cmt"># 4. Width profile along the corridor</span>
+plt.figure(figsize=(9, 3.5))
+plt.plot(ys[ok], width[ok], ".-")
+plt.axhline(1.2, color="red", ls="--", label="1.2 m minimum")
+plt.plot(ys[i], width[i], "ro")
+plt.xlabel("position along the corridor, y [m]")
+plt.ylabel("clear width [m]")
+plt.legend()
+plt.tight_layout()
+plt.savefig("width_profile.png", dpi=150)
+print("Saved width_profile.png")
+
+<span class="cmt"># 5. Draw the rays in 3D: one line from the left hit to the right hit</span>
+ends_l = origins[ok] + left[ok, None] * [-1, 0, 0]
+ends_r = origins[ok] + right[ok, None] * [1, 0, 0]
+lines = o3d.geometry.LineSet(
+    o3d.utility.Vector3dVector(np.vstack([ends_l, ends_r])),
+    o3d.utility.Vector2iVector([[k, k + ok.sum()] for k in range(ok.sum())]),
+)
+lines.paint_uniform_color([1, 0, 0])
+no_ceiling = o3d.geometry.AxisAlignedBoundingBox([-5, -25, -2], [5, 5, 1.2])
+mesh.compute_vertex_normals()
+o3d.visualization.draw_geometries([mesh.crop(no_ceiling), lines], window_name="Virtual tape measure",
+                                  mesh_show_back_face=True)
+plt.show()</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='활성화된 .venv 안에서'>inside the active .venv</span><button class="copy">copy</button></div>
+          <pre><code>python measure_width.py</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='출력'>output</span><button class="copy">copy</button></div>
+<pre><code>Measured spots   : 42 of 44
+Median width     : 1.78 m
+Narrowest        : 1.32 m at y = -8.50 m
+Spots under 1.2 m: 0
+Saved width_profile.png</code></pre>
+        </div>
+        <figure>
+          <img src="assets/week05_width_rays.jpg" alt="Top view of the corridor mesh with red lines across it every 25 cm showing each width measurement" loading="lazy">
+          <figcaption class="i18n" data-ko='빨간 선 하나 = 측정 한 번 (왼쪽 벽에서 오른쪽 벽까지).'>Each red line is one measurement, from the left hit to the right hit.</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/week05_width_profile.jpg" alt="Line chart of clear width along the corridor: about 2 m at y = -13.5, dropping to a low of 1.32 m at y = -8.5, then rising to about 2.5 m from y = -6 to -4" loading="lazy">
+          <figcaption class="i18n" data-ko='width_profile.png: y = −9.5 ~ −7 에서 가장 좁고 (약 1.3–1.4 m), y = −6 ~ −4 에서는 약 2.5 m 입니다. 무엇이 복도를 좁히는지 3D 창에서 찾아보세요.'>width_profile.png: narrowest between y = −9.5 and −7 (about 1.3–1.4 m), about 2.5 m from y = −6 to −4. Find what narrows the corridor in the 3D window.</figcaption>
+        </figure>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='inf 는 무슨 뜻?'>What does inf mean?</span>
+            <p class="i18n" data-ko='광선이 아무 삼각형에도 맞지 않으면 거리가 <code class="ic">inf</code> (무한대) 입니다. 문이 열린 곳이나 메시의 구멍입니다. 44곳 중 2곳이 그래서 빠졌습니다. 구멍이 많은 Ball pivoting 메시로 바꾸면 몇 곳이 빠질까요?'>If a ray hits no triangle, its distance is <code class="ic">inf</code> (infinity): an open doorway or a hole in the mesh. That's why 2 of the 44 spots were skipped. How many would be skipped with the ball-pivoting mesh, which has more holes?</p>
+          </div>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <p class="i18n" data-ko='① 광선 높이 <code class="ic">0.8</code> 을 <code class="ic">0.0</code> 으로 바꿔 보세요 (바닥 위 약 50 cm). 가장 좁은 곳이 바뀌나요? ② <code class="ic">shoot([0, 0, 1])</code> 과 <code class="ic">shoot([0, 0, -1])</code> 을 더해 <strong>천장 높이</strong> 를 재 보세요.'>① Change the ray height from <code class="ic">0.8</code> to <code class="ic">0.0</code> (about 50 cm above the floor). Does the narrowest spot move? ② Add <code class="ic">shoot([0, 0, 1])</code> and <code class="ic">shoot([0, 0, -1])</code> to measure the <strong>ceiling height</strong>.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s7"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 8 : EXERCISE -->
+    <section class="step" id="s8">
+      <div class="stepnum"><div class="dot"><span>8</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='연습 문제: 이 메시로 견적을 내도 될까?'>Exercise: Is the mesh good enough for a quote?</h2>
+        <p class="i18n" data-ko='<strong>배경.</strong> 청소 업체가 복도 바닥 청소 견적을 요청했습니다. 시설 관리자는 줄자로 다시 재는 대신 로봇 스캔 메시를 쓰고 싶어 합니다. 하지만 6단계에서 보았듯 메시의 숫자는 틀릴 수 있습니다. 4주차의 BIM 설계(<code class="ic">design.ifc</code>)를 기준으로, 어떤 메시를 얼마나 믿을 수 있는지 확인하세요.'><strong>Background.</strong> A cleaning company has asked for a quote for the corridor floor. The facility manager would like to use the robot's scan mesh instead of measuring again with a tape. But as step 6 showed, mesh numbers can be wrong. Use last week's BIM design (<code class="ic">design.ifc</code>) as the reference and find out which mesh you can trust, and how much.</p>
+        <p class="i18n" data-ko='<strong>주어진 파일:</strong>'><strong>You are given:</strong></p>
+        <div class="tree">
+          <table>
+            <tr><td>design.ifc</td><td class="i18n" data-ko='복도의 BIM 설계: 바닥 슬래브 (<code class="ic">IfcSlab</code>) 1개와 벽 (<code class="ic">IfcWall</code>) 9개. 스캔과 같은 좌표.'>The corridor's BIM design: one floor slab (<code class="ic">IfcSlab</code>) and 9 walls (<code class="ic">IfcWall</code>). Same coordinates as the scan.</td></tr>
+            <tr><td>corridor_poisson.ply</td><td class="i18n" data-ko='4단계에서 만든 Poisson 메시.'>Your Poisson mesh from step 4.</td></tr>
+            <tr><td>corridor_bpa.ply</td><td class="i18n" data-ko='5단계에서 만든 Ball pivoting 메시.'>Your ball-pivoting mesh from step 5.</td></tr>
+          </table>
+        </div>
+        <p class="i18n" data-ko='4주차 연습 문제에서 이미 추가했다면 건너뛰어도 됩니다:'>Skip this if you already added it for the Week 4 exercise:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='프로젝트 폴더 안에서'>inside the project folder</span><button class="copy">copy</button></div>
+          <pre><code>uv add ifcopenshell</code></pre>
+        </div>
+        <p class="i18n" data-ko='<strong>과제.</strong> <code class="ic">survey.py</code> 를 만드세요. 실행하면 다음을 해야 합니다:'><strong>Your task.</strong> Create <code class="ic">survey.py</code>. When you run it, it must:</p>
+        <ol>
+          <li class="i18n" data-ko='설계 파일에서 바닥 슬래브의 <strong>윗면 넓이</strong> (설계 바닥 넓이)와 벽의 <strong>높이</strong> (설계 층고)를 구합니다.'>From the design, get the slab's <strong>top-face area</strong> (the design floor area) and the walls' <strong>height</strong> (the design room height).</li>
+          <li class="i18n" data-ko='두 메시 각각에서 <strong>설계 바닥 윤곽 안에 있는 삼각형만</strong> 사용해 바닥 넓이, 천장 넓이, 층고를 측정합니다 (6단계 방법).'>For each of the two meshes, measure floor area, ceiling area and room height using <strong>only triangles inside the design floor outline</strong> (the step 6 method).</li>
+          <li class="i18n" data-ko='방법마다 한 줄씩, 설계 대비 차이(%)와 함께 표로 출력합니다. 천장 넓이는 설계 바닥 넓이와 비교합니다 (천장은 바닥 바로 위에 있으므로).'>Print a table, one line per method, with the difference from the design in %. Compare the ceiling area with the design floor area (the ceiling sits right above the floor).</li>
+        </ol>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='힌트'>Hints</span>
+            <p class="i18n" data-ko='IFC 요소를 Open3D 메시로 바꾸는 함수입니다. 그대로 쓰세요:'>A function that turns an IFC element into an Open3D mesh. Use it as is:</p>
+          </div>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='survey.py 에 붙여넣기'>paste into survey.py</span><button class="copy">copy</button></div>
+<pre><code>import numpy as np
+import open3d as o3d
+import ifcopenshell
+import ifcopenshell.geom
+
+def ifc_to_mesh(element):
+    """Turn one IFC element (a wall, a slab, ...) into an Open3D triangle mesh."""
+    settings = ifcopenshell.geom.settings()
+    settings.set("use-world-coords", True)
+    geom = ifcopenshell.geom.create_shape(settings, element).geometry
+    return o3d.geometry.TriangleMesh(
+        o3d.utility.Vector3dVector(np.array(geom.verts).reshape(-1, 3)),
+        o3d.utility.Vector3iVector(np.array(geom.faces).reshape(-1, 3)),
+    )
+
+design = ifcopenshell.open("data/design.ifc")
+slab = ifc_to_mesh(design.by_type("IfcSlab")[0])
+walls = [ifc_to_mesh(w) for w in design.by_type("IfcWall")]</code></pre>
+        </div>
+        <ul>
+          <li class="i18n" data-ko='슬래브는 상자입니다. 윗면 = 법선 z &gt; 0.9 인 삼각형. 그 삼각형들의 정점 4개가 바닥 윤곽입니다.'>The slab is a box. Its top face = the triangles with normal z &gt; 0.9. Their 4 vertices are the floor outline.</li>
+          <li class="i18n" data-ko='점이 다각형 안에 있는지: <code class="ic">matplotlib.path.Path(corners).contains_points(xy)</code>. 모서리는 순서대로 (중심 둘레로 <code class="ic">np.arctan2</code> 각도 순) 정렬해야 합니다.'>Is a point inside a polygon: <code class="ic">matplotlib.path.Path(corners).contains_points(xy)</code>. Sort the corners in order around their centre first (by <code class="ic">np.arctan2</code> angle).</li>
+          <li class="i18n" data-ko='6단계의 분류 코드를 함수로 만들면 두 메시에 똑같이 쓸 수 있습니다.'>Turn the step 6 sorting code into a function so you can run it on both meshes.</li>
+        </ul>
+        <p class="i18n" data-ko='출력 예시 (숫자는 직접 채우세요):'>Example output (fill in your own numbers):</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='출력 형식 예시'>example output format</span><button class="copy">copy</button></div>
+<pre><code>Design floor 38.1 m², wall height ?.?? m
+method          floor m²         ceiling m²       height m
+Poisson         ??.? (+?%)       ??.? (+??%)      ?.?? (-?%)
+Ball pivoting   ??.? (-?%)       ??.? (-??%)      ?.?? (+?%)</code></pre>
+        </div>
+        <div class="callout verify">
+          <div class="ci">?</div>
+          <div><span class="ct i18n" data-ko='답하세요'>Answer these</span>
+            <p class="i18n" data-ko='① 바닥, 천장, 층고 각각에서 어느 메시가 설계에 더 가깝나요?'>① For floor, ceiling and height, which mesh is closer to the design?</p>
+            <p class="i18n" data-ko='② 천장 넓이는 바닥 넓이와 거의 같아야 합니다. Poisson의 천장은 왜 너무 크고, Ball pivoting의 천장은 왜 너무 작을까요? (4, 5단계의 그림을 다시 보세요.)'>② The ceiling area should be close to the floor area. Why is Poisson's ceiling too big and ball pivoting's too small? (Look again at your pictures from steps 4 and 5.)</p>
+            <p class="i18n" data-ko='③ 청소 견적에는 어느 메시의 바닥 넓이를 보내겠습니까? 이유는?'>③ Which mesh's floor area would you send to the cleaning company, and why?</p>
+          </div>
+        </div>
+        <p class="i18n" data-ko='<strong>제출물:</strong>'><strong>Hand in:</strong></p>
+        <ol>
+          <li><code class="ic">survey.py</code></li>
+          <li class="i18n" data-ko='출력된 표 (복사해서 붙여넣기)'>The printed table (copy and paste it)</li>
+          <li class="i18n" data-ko='①–③ 에 대한 짧은 답'>Short answers to ①–③</li>
+        </ol>
+        <div class="done-row"><button class="done-btn" data-done="s8"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- CHEAT SHEET -->
+  <section class="cheat">
+    <h2 class="i18n" data-ko='한 화면 요약 (치트 시트)'>One-screen cheat sheet</h2>
+    <p class="i18n" data-ko='위 내용을 순서대로 정리했습니다 — 흐름을 익힌 뒤 참고용으로 쓰세요.'>Everything above, in order — for reference once you know the flow.</p>
+    <div class="code">
+      <div class="code-head"><span class="code-tag" id="cheatTag">Windows · cmd</span><button class="copy">copy</button></div>
+      <pre><code id="cheatCode"></code></pre>
+    </div>
+  </section>
+
+  <footer>
+    <span class="i18n" data-ko='스마트 시설 관리 · 5주차 실습 · 데이터: 수업용 UGV (라이다 + ZED X 카메라) · 관리 도구'>Smart Facility Management · Week 5 practical · data: course UGV (lidar + ZED X camera) · manager</span>
+    <a href="https://www.open3d.org/docs/release/tutorial/geometry/surface_reconstruction.html" target="_blank" rel="noopener" class="i18n" data-ko='Open3D 표면 재구성'>Open3D surface reconstruction</a> ·
+    <a href="week04.html" class="i18n" data-ko='4주차 포인트 클라우드'>Week 4 point clouds</a> ·
+    <a href="index.html" class="i18n" data-ko='2주차 설치 가이드'>Week 2 setup guide</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var KEY_OS="setup.os", KEY_DONE="week05.done", KEY_THEME="setup.theme", KEY_LANG="setup.lang";
+  var lang="en";
+
+  /* ---- language strings driven by JS ---- */
+  var STR={
+    copy:      { en:"copy",           ko:"복사" },
+    copied:    { en:"copied ✓",       ko:"복사됨 ✓" },
+    markDone:  { en:" Mark step done", ko:" 완료 표시" },
+    stepDone:  { en:" Step complete",  ko:" 완료됨" },
+    langBtn:   { en:"한국어",          ko:"EN" }
+  };
+  var CHEAT_CMT={
+    en:["# 1 · open last week's project",
+        "# 2-3 · mesh basics, prepare the points",
+        "# 4-5 · build meshes, compare methods",
+        "# 6-7 · measure areas and corridor width",
+        "# 8 · exercise: survey against the design"],
+    ko:["# 1 · 지난주 프로젝트 열기",
+        "# 2-3 · 메시 기초, 점 준비",
+        "# 4-5 · 메시 만들기, 방법 비교",
+        "# 6-7 · 넓이와 복도 폭 측정",
+        "# 8 · 연습 문제: 설계와 비교 측정"]
+  };
+
+  /* ---- i18n: capture English HTML, swap on demand ---- */
+  var i18nEls=document.querySelectorAll(".i18n");
+  i18nEls.forEach(function(el){ el._en=el.innerHTML; });
+  function applyLang(l){
+    lang=(l==="ko")?"ko":"en";
+    document.documentElement.setAttribute("lang",lang);
+    i18nEls.forEach(function(el){
+      var ko=el.getAttribute("data-ko");
+      el.innerHTML=(lang==="ko"&&ko!=null)?ko:el._en;
+    });
+    document.querySelectorAll(".copy").forEach(function(b){
+      if(!b.classList.contains("copied")) b.textContent=STR.copy[lang];
+    });
+    document.getElementById("langBtn").textContent=STR.langBtn[lang];
+    renderCheat(currentOS);
+    refresh();
+    try{ localStorage.setItem(KEY_LANG, lang); }catch(e){}
+  }
+
+  /* ---- OS switching ---- */
+  var currentOS="win-cmd";
+  var buttons=document.querySelectorAll(".seg button");
+  function applyOS(os){
+    currentOS=os;
+    document.querySelectorAll("[data-os]").forEach(function(el){
+      var list=el.getAttribute("data-os").split(/\s+/);
+      el.classList.toggle("os-on", list.indexOf(os)!==-1);
+    });
+    buttons.forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.set===os?"true":"false"); });
+    renderCheat(os);
+    try{ localStorage.setItem(KEY_OS, os); }catch(e){}
+  }
+  buttons.forEach(function(b){ b.addEventListener("click", function(){ applyOS(b.dataset.set); }); });
+
+  /* ---- cheat sheet (per-OS, per-lang) ---- */
+  function cheatFor(os){
+    var activate = {
+      "win-cmd":".venv\\Scripts\\activate.bat",
+      "win-ps":".venv\\Scripts\\Activate.ps1",
+      "mac":"source .venv/bin/activate",
+      "linux":"source .venv/bin/activate"
+    }[os];
+    var c=CHEAT_CMT[lang], L=[];
+    L.push("<span class='cmt'>"+c[0]+"</span>");
+    L.push("cd facility-scan");
+    L.push(activate);
+    L.push("<span class='cmt'>"+c[1]+"</span>");
+    L.push("python mesh_basics.py");
+    L.push("python prepare_points.py");
+    L.push("<span class='cmt'>"+c[2]+"</span>");
+    L.push("python mesh_poisson.py");
+    L.push("python mesh_compare.py");
+    L.push("<span class='cmt'>"+c[3]+"</span>");
+    L.push("python measure_areas.py");
+    L.push("python measure_width.py");
+    L.push("<span class='cmt'>"+c[4]+"</span>");
+    L.push("uv add ifcopenshell");
+    L.push("python survey.py");
+    return L.join("\n");
+  }
+  var tagText={ "win-cmd":"Windows · cmd","win-ps":"Windows · PowerShell","mac":"macOS","linux":"Linux" };
+  function renderCheat(os){
+    document.getElementById("cheatCode").innerHTML=cheatFor(os);
+    document.getElementById("cheatTag").textContent=tagText[os];
+  }
+
+  /* ---- copy buttons ---- */
+  document.addEventListener("click", function(e){
+    var btn=e.target.closest(".copy"); if(!btn) return;
+    var code=btn.closest(".code").querySelector("pre code");
+    var text=code.innerText;
+    function ok(){ btn.classList.add("copied"); var o=STR.copy[lang]; btn.textContent=STR.copied[lang];
+      setTimeout(function(){ btn.classList.remove("copied"); btn.textContent=o; },1400); }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(ok,ok); }
+    else { try{ var t=document.createElement("textarea"); t.value=text; document.body.appendChild(t);
+      t.select(); document.execCommand("copy"); document.body.removeChild(t); ok(); }catch(e){} }
+  });
+
+  /* ---- done tracking + progress ---- */
+  var steps=["s1","s2","s3","s4","s5","s6","s7","s8"], done={};
+  try{ done=JSON.parse(localStorage.getItem(KEY_DONE))||{}; }catch(e){ done={}; }
+  function saveDone(){ try{ localStorage.setItem(KEY_DONE, JSON.stringify(done)); }catch(e){} }
+  function refresh(){
+    var n=0;
+    steps.forEach(function(id){
+      var el=document.getElementById(id);
+      if(done[id]){ el.classList.add("done"); n++; } else { el.classList.remove("done"); }
+      var b=el.querySelector(".done-btn .box");
+      if(b) b.textContent = done[id] ? "✓" : "";
+      var lbl=el.querySelector(".done-btn .done-label");
+      if(lbl) lbl.textContent = done[id] ? STR.stepDone[lang] : STR.markDone[lang];
+    });
+    document.getElementById("pfill").style.width=(n/steps.length*100)+"%";
+  }
+  document.querySelectorAll(".done-btn").forEach(function(b){
+    b.addEventListener("click", function(){ var id=b.dataset.done; done[id]=!done[id]; saveDone(); refresh(); });
+  });
+
+  /* ---- theme toggle ---- */
+  var root=document.documentElement, tb=document.getElementById("themeBtn");
+  try{ var st=localStorage.getItem(KEY_THEME); if(st) root.setAttribute("data-theme",st); }catch(e){}
+  tb.addEventListener("click", function(){
+    var cur=root.getAttribute("data-theme");
+    var mqDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
+    var next = cur ? (cur==="dark"?"light":"dark") : (mqDark?"light":"dark");
+    root.setAttribute("data-theme",next);
+    try{ localStorage.setItem(KEY_THEME,next); }catch(e){}
+  });
+
+  /* ---- language toggle ---- */
+  document.getElementById("langBtn").addEventListener("click", function(){
+    applyLang(lang==="ko"?"en":"ko");
+  });
+
+  /* ---- init ---- */
+  var savedOS="win-cmd";
+  try{ savedOS=localStorage.getItem(KEY_OS)||"win-cmd"; }catch(e){}
+  var savedLang="en";
+  try{ savedLang=localStorage.getItem(KEY_LANG)||"en"; }catch(e){}
+  applyOS(savedOS);
+  applyLang(savedLang);
+})();
+</script>
+</body>
+</html>
