@@ -170,12 +170,13 @@
       tags:["uv init / add","open3d","pandas","IFC / BIM"],
       files:[ { href:"point_cloud_lecture.pptx", en:"Slides", ko:"슬라이드" },
               { href:"class_data.zip", en:"Data", ko:"데이터" } ] },
-    { week:"05", page:"week05.html", key:"week05.done", steps:8,
-      title:{ en:"Meshes: from points to surfaces", ko:"메시: 점에서 면으로" },
-      text:{ en:"Turn the corridor scan into a triangle mesh, compare Poisson, ball pivoting and alpha shapes, then measure floor area, wall paint and corridor width.",
-             ko:"복도 스캔을 삼각형 메시로 만들고 Poisson, Ball pivoting, Alpha shape 을 비교한 뒤, 바닥 넓이, 벽 페인트 양, 복도 폭을 측정합니다." },
-      tags:["triangle meshes","Poisson","ray casting","as-built vs design"],
-      files:[ { href:"class_data.zip", en:"Data", ko:"데이터" } ] }
+    { week:"05", page:"week05.html", key:"week05.done", steps:7,
+      title:{ en:"Meshes: measuring from the scanner's mesh", ko:"메시: 스캐너 메시로 측정하기" },
+      text:{ en:"Open the scanner's textured mesh, check it for holes, measure floor, wall paint and corridor width, then rebuild it with Poisson and compare the two.",
+             ko:"스캐너가 준 텍스처 메시를 열어 구멍을 검사하고, 바닥 넓이, 벽 페인트 양, 복도 폭을 측정한 뒤, Poisson 으로 다시 만들어 두 메시를 비교합니다." },
+      tags:["textured meshes","mesh quality","ray casting","Poisson"],
+      files:[ { href:"scanner_mesh.zip", en:"Mesh", ko:"메시" },
+              { href:"class_data.zip", en:"Data", ko:"데이터" } ] }
   ];
 
   var KEY_THEME="setup.theme", KEY_LANG="setup.lang", lang="en";
