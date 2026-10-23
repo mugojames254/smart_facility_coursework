@@ -1,0 +1,1143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facility LLM Lab</title>
+<meta name="description" content="Week 9 practical: run a small LLM on your own laptop with Ollama, then triage Korean facility complaints into JSON, answer from an O&amp;M manual with RAG, draft an inspection report from a corridor photo, and build a tool-using agent with human approval.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+  :root{
+    --bg:#e9ecec; --surface:#ffffff; --surface-2:#f3f6f6;
+    --ink:#152220; --muted:#576560; --faint:#8a9793;
+    --border:#d6dedc; --border-strong:#c2cccb;
+    --accent:#0e7b7b; --accent-ink:#0a5c5c; --accent-wash:#e3f0ef;
+    --warn:#a85808; --warn-bg:#fbf1e4; --warn-border:#efd6b3;
+    --ok:#137a48; --ok-bg:#e8f4ec; --ok-border:#bfe1cb;
+    --code-bg:#0e1a19; --code-surface:#152625; --code-ink:#d6e4e1;
+    --code-muted:#7f938f; --code-prompt:#3fb7ac; --code-border:#233634;
+    --shadow:0 1px 2px rgba(20,40,38,.05),0 8px 24px -14px rgba(20,40,38,.22);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1211; --surface:#111a19; --surface-2:#16211f;
+      --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
+      --border:#22302e; --border-strong:#2d3d3a;
+      --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
+      --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
+      --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
+      --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
+      --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1211; --surface:#111a19; --surface-2:#16211f;
+    --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
+    --border:#22302e; --border-strong:#2d3d3a;
+    --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
+    --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
+    --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
+    --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
+    --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+    font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  html[lang="ko"] body{
+    font-family:"IBM Plex Sans","Noto Sans KR",ui-sans-serif,system-ui,sans-serif;
+  }
+  .wrap{max-width:940px;margin:0 auto;padding:0 24px}
+
+  /* progress bar */
+  .progress-bar{position:sticky;top:0;z-index:40;height:4px;background:transparent}
+  .progress-fill{height:100%;width:0;background:var(--accent);transition:width .35s ease}
+
+  /* header */
+  header{padding:56px 0 30px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent-ink);font-weight:600;margin:0 0 14px}
+  h1{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;
+    font-size:clamp(2.3rem,6vw,3.6rem);line-height:1.02;letter-spacing:-.02em;
+    margin:0 0 16px;text-wrap:balance}
+  .lede{font-size:1.12rem;color:var(--muted);max-width:60ch;margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:22px;
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--faint)}
+  .meta b{color:var(--muted);font-weight:600}
+  .slides-btn{display:inline-flex;align-items:center;gap:8px;margin-top:22px;
+    padding:10px 18px;background:var(--accent);color:#fff;font-weight:600;font-size:14px;
+    text-decoration:none;border-radius:8px;box-shadow:var(--shadow);
+    transition:background .2s,transform .1s}
+  .slides-btn:hover{background:var(--accent-ink)}
+  .slides-btn:active{transform:translateY(1px)}
+
+  /* sticky OS control */
+  .controls{position:sticky;top:4px;z-index:30;background:var(--bg);
+    padding:14px 0 12px;margin-bottom:8px;
+    border-bottom:1px solid var(--border)}
+  .controls-inner{display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between}
+  .os-label{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint);font-weight:600}
+  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:11px;padding:3px;gap:2px;flex-wrap:wrap}
+  .seg button{font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;font-weight:500;
+    color:var(--muted);background:transparent;border:0;padding:7px 13px;border-radius:8px;
+    cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+  .seg button:hover{color:var(--ink)}
+  .seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent-ink);
+    box-shadow:var(--shadow);font-weight:600}
+  .util{display:flex;align-items:center;gap:8px}
+  .theme-toggle,.lang-toggle{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:9px;
+    padding:8px 12px;cursor:pointer;transition:color .15s,border-color .15s}
+  .theme-toggle:hover,.lang-toggle:hover{color:var(--ink);border-color:var(--border-strong)}
+  .lang-toggle{font-weight:600;min-width:64px}
+  html[lang="ko"] .lang-toggle,html[lang="ko"] .os-label,html[lang="ko"] .eyebrow,
+  html[lang="ko"] .meta,html[lang="ko"] .code-tag{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
+
+  /* steps */
+  main{padding:20px 0 40px;counter-reset:step}
+  .step{display:grid;grid-template-columns:52px 1fr;gap:22px;
+    padding:30px 0;border-top:1px solid var(--border)}
+  .step:first-of-type{border-top:0}
+  .stepnum{position:relative}
+  .stepnum .dot{position:sticky;top:82px;width:52px;height:52px;border-radius:14px;
+    background:var(--surface);border:1.5px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;
+    font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:1.35rem;
+    color:var(--accent-ink);box-shadow:var(--shadow);transition:background .2s,border-color .2s,color .2s}
+  .step.done .stepnum .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+  .step.done .stepnum .dot::after{content:"✓";font-size:1.5rem}
+  .step.done .stepnum .dot span{display:none}
+  .step-body h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;
+    font-size:1.5rem;letter-spacing:-.01em;margin:2px 0 6px;text-wrap:balance}
+  .step-body p{margin:0 0 14px;color:var(--muted)}
+  .step-body p strong{color:var(--ink);font-weight:600}
+  .inline-link{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-wash);
+    font-weight:500}
+  .inline-link:hover{border-bottom-color:var(--accent)}
+  code.ic{font-family:"IBM Plex Mono",monospace;font-size:.86em;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:5px;
+    padding:1px 5px;color:var(--accent-ink)}
+
+  /* code block */
+  .code{background:var(--code-bg);border:1px solid var(--code-border);border-radius:12px;
+    overflow:hidden;margin:0 0 16px;box-shadow:var(--shadow)}
+  .code-head{display:flex;align-items:center;justify-content:space-between;
+    padding:8px 12px 8px 14px;background:var(--code-surface);border-bottom:1px solid var(--code-border)}
+  .code-tag{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--code-muted);font-weight:500}
+  .copy{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--code-muted);
+    background:transparent;border:1px solid var(--code-border);border-radius:7px;
+    padding:5px 10px;cursor:pointer;transition:color .15s,border-color .15s}
+  .copy:hover{color:var(--code-ink);border-color:var(--code-muted)}
+  .copy.copied{color:var(--code-prompt);border-color:var(--code-prompt)}
+  pre{margin:0;padding:14px 16px;overflow-x:auto}
+  pre code{font-family:"IBM Plex Mono",monospace;font-size:13.5px;line-height:1.7;
+    color:var(--code-ink);white-space:pre;display:block}
+  pre .cmt{color:var(--code-muted)}
+  pre .pr{color:var(--code-prompt);user-select:none}
+
+  /* os-specific visibility */
+  [data-os]{display:none}
+  [data-os].os-on{display:block}
+
+  /* callouts */
+  .callout{border-radius:12px;padding:16px 18px;margin:0 0 16px;border:1px solid;
+    display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start}
+  .callout .ci{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;
+    width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center}
+  .callout p{margin:0 0 8px}
+  .callout p:last-child{margin:0}
+  .callout .ct{font-weight:600;display:block;margin-bottom:3px}
+  .verify{background:var(--ok-bg);border-color:var(--ok-border)}
+  .verify .ci{background:var(--ok);color:#fff}
+  .verify .ct{color:var(--ok)}
+  .verify code.ic{background:transparent;border-color:var(--ok-border);color:var(--ok)}
+  .warn{background:var(--warn-bg);border-color:var(--warn-border)}
+  .warn .ci{background:var(--warn);color:#fff}
+  .warn .ct{color:var(--warn)}
+  .warn code.ic{background:transparent;border-color:var(--warn-border);color:var(--warn)}
+  .tip{background:var(--accent-wash);border-color:var(--border)}
+  .tip .ci{background:var(--accent);color:#fff}
+  .tip .ct{color:var(--accent-ink)}
+
+  /* lists (exercise) */
+  .step-body ol,.step-body ul{margin:0 0 16px;padding-left:22px}
+  .step-body li{margin:4px 0}
+  .step-body li ul{margin:4px 0 0}
+
+  /* done toggle */
+  .done-row{margin-top:6px}
+  .done-btn{display:inline-flex;align-items:center;gap:10px;
+    font-family:"IBM Plex Sans",sans-serif;font-size:14px;font-weight:500;color:var(--muted);
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:9px 15px;cursor:pointer;transition:color .15s,border-color .15s,background .15s}
+  .done-btn:hover{border-color:var(--border-strong);color:var(--ink)}
+  .done-btn .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;font-size:12px;transition:background .15s,border-color .15s}
+  .step.done .done-btn{color:var(--ok);border-color:var(--ok-border);background:var(--ok-bg)}
+  .step.done .done-btn .box{background:var(--ok);border-color:var(--ok);color:#fff}
+
+  /* cheat sheet */
+  .cheat{margin:12px 0 60px;border:1px solid var(--border);border-radius:16px;
+    background:var(--surface);padding:26px 26px 10px;box-shadow:var(--shadow)}
+  .cheat h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:1.4rem;
+    margin:0 0 4px;letter-spacing:-.01em}
+  .cheat p{color:var(--muted);margin:0 0 18px;font-size:.95rem}
+
+  footer{padding:20px 0 60px;border-top:1px solid var(--border);
+    color:var(--faint);font-family:"IBM Plex Mono",monospace;font-size:12px}
+  footer a{color:var(--accent-ink);text-decoration:none}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+  @media (max-width:620px){
+    .step{grid-template-columns:40px 1fr;gap:14px}
+    .stepnum .dot{width:40px;height:40px;font-size:1.05rem}
+    .stepnum .dot::after{font-size:1.15rem}
+    header{padding:40px 0 22px}
+  }
+
+  /* week 4 + 5 additions */
+  code.ic{overflow-wrap:anywhere}
+  .step-body{min-width:0}
+  .btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .btn-row .slides-btn{margin-top:0}
+  .ghost-btn{background:var(--surface);color:var(--accent-ink);border:1px solid var(--border)}
+  .ghost-btn:hover{background:var(--surface-2)}
+  .tree{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:4px 0;margin:0 0 16px;overflow-x:auto}
+  .tree table{width:100%;border-collapse:collapse;font-size:.92rem}
+  .tree td{padding:8px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+  .tree tr:first-child td{border-top:0}
+  .tree td:first-child{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--accent-ink);
+    white-space:nowrap;font-weight:500}
+  figure{margin:0 0 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    overflow:hidden;box-shadow:var(--shadow)}
+  figure img{display:block;width:100%;height:auto;background:#fff}
+  figcaption{padding:10px 14px;font-size:.88rem;color:var(--faint);border-top:1px solid var(--border)}
+  .fig-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 16px}
+  .fig-pair figure{margin:0}
+  .fig-pair img{aspect-ratio:4/3;object-fit:cover}
+  @media (max-width:620px){.fig-pair{grid-template-columns:1fr}}
+  /* course navigation */
+  .course-nav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 18px;margin:0 0 26px;
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px}
+  .course-nav a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid transparent}
+  .course-nav a:hover{border-bottom-color:var(--accent)}
+  .course-nav .pn{display:flex;flex-wrap:wrap;gap:8px 18px}
+  html[lang="ko"] .course-nav{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
+</style>
+</head>
+<body>
+<div class="progress-bar"><div class="progress-fill" id="pfill"></div></div>
+
+<div class="wrap">
+  <header>
+    <nav class="course-nav" aria-label="Course navigation">
+      <a href="index.html" class="i18n" data-ko='← 강의 홈 (전체 목차)'>← Course home (all classes)</a>
+      <span class="pn">
+      <a href="week05.html" class="i18n" data-ko='‹ 5주차: 메시'>‹ Week 5: Meshes</a>
+      </span>
+    </nav>
+    <p class="eyebrow i18n" data-ko='스마트 시설 관리 - 실습 세션 · 9주차'>Smart Facility Management - Practical Session · Week 09 . (For any queries please feel free to reachout: mugojames254@skku.edu)</p>
+    <h1 class="i18n" data-ko='LLM: 내 노트북에서 돌아가는 시설관리 도우미 만들기'>LLMs: Build a Facility Assistant That Runs on Your Laptop</h1>
+    <p class="lede i18n" data-ko='강의에서는 LLM이 민원을 분류하고, 매뉴얼에서 답을 찾고, 사진을 점검하고, 도구를 쓰는 모습을 보았습니다. 오늘은 그것을 직접 만듭니다. 클라우드 API 대신 <strong>Ollama</strong> 로 작은 모델을 <strong>내 노트북에서</strong> 실행하므로 API 키도 비용도 필요 없고, 민원 같은 데이터가 밖으로 나가지 않습니다.'>In the lecture we saw LLMs triage complaints, answer from manuals, inspect photos and use tools. Today you build each of those yourself. Instead of a cloud API we run a small model <strong>on your own laptop</strong> with <strong>Ollama</strong>: no API key, no cost, and data such as complaints never leaves your machine.</p>
+    <div class="meta">
+      <span class="i18n" data-ko='<b>프로젝트</b> facility-llm (새 프로젝트)'><b>Project</b> facility-llm (new)</span>
+      <span class="i18n" data-ko='<b>모델</b> gemma3:4b · bge-m3 (Ollama)'><b>Models</b> gemma3:4b · bge-m3 (Ollama)</span>
+      <span class="i18n" data-ko='<b>라이브러리</b> ollama · pydantic · pandas · pypdf'><b>Libraries</b> ollama · pydantic · pandas · pypdf</span>
+      <span class="i18n" data-ko='<b>새 개념</b> 프롬프트 · 토큰 · JSON 출력 · RAG · 비전 모델 · 에이전트'><b>New ideas</b> prompts · tokens · JSON output · RAG · vision model · agents</span>
+    </div>
+    <div class="btn-row">
+      <a class="slides-btn" href="week09_data.zip" download>
+        <span aria-hidden="true">⬇</span>
+        <span class="i18n" data-ko='9주차 데이터 내려받기 (.zip, 0.4 MB)'>Download Week 9 data (.zip, 0.4 MB)</span>
+      </a>
+      <a class="slides-btn ghost-btn" href="llm_lecture_smart_facility_mgt.pptx" download>
+        <span aria-hidden="true">⬇</span>
+        <span class="i18n" data-ko='강의 슬라이드 (.pptx)'>Lecture slides (.pptx)</span>
+      </a>
+      <a class="slides-btn ghost-btn" href="week05.html">
+        <span aria-hidden="true">←</span>
+        <span class="i18n" data-ko='5주차: 메시'>Week 5: meshes</span>
+      </a>
+    </div>
+  </header>
+</div>
+
+<div class="controls">
+  <div class="wrap controls-inner">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="os-label i18n" data-ko='사용 중인 시스템'>Your system</span>
+      <div class="seg" role="group" aria-label="Choose your operating system">
+        <button data-set="win-cmd" aria-pressed="true">Windows · cmd</button>
+        <button data-set="win-ps" aria-pressed="false">Windows · PowerShell</button>
+        <button data-set="mac" aria-pressed="false">macOS</button>
+        <button data-set="linux" aria-pressed="false">Linux</button>
+      </div>
+    </div>
+    <div class="util">
+      <button class="lang-toggle" id="langBtn" aria-label="Switch language">한국어</button>
+      <button class="theme-toggle" id="themeBtn" aria-label="Toggle color theme">◐ theme</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <main>
+
+    <!-- STEP 0 : OLLAMA -->
+    <section class="step" id="s0">
+      <div class="stepnum"><div class="dot"><span>0</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='Ollama 설치와 모델 내려받기 (수업 전에!)'>Install Ollama and download the models (before class!)</h2>
+        <p class="i18n" data-ko='<strong>Ollama</strong> 는 LLM을 내 컴퓨터에서 실행해 주는 프로그램입니다. 백그라운드에서 작은 서버로 돌아가고, 우리는 터미널이나 Python에서 그 서버에 질문을 보냅니다. 위에서 운영체제를 고르고 설치하세요:'><strong>Ollama</strong> runs LLMs on your own computer. It works as a small server in the background, and we send it questions from the terminal or from Python. Pick your system at the top, then install it:</p>
+        <div data-os="win-cmd win-ps" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · cmd / PowerShell</span><button class="copy">copy</button></div>
+            <pre><code>winget install --id Ollama.Ollama -e</code></pre>
+          </div>
+          <p class="i18n" data-ko='설치가 끝나면 <strong>터미널을 닫았다가 새로 여세요</strong>. Ollama는 작업 표시줄 아이콘(라마)으로 자동 실행됩니다. winget이 없다면 <a class="inline-link" href="https://ollama.com/download/windows" target="_blank" rel="noopener">ollama.com/download</a> 에서 설치 파일을 받아 실행해도 됩니다.'>When it finishes, <strong>close the terminal and open a new one</strong>. Ollama starts by itself in the system tray (the llama icon). No winget? Download the installer from <a class="inline-link" href="https://ollama.com/download/windows" target="_blank" rel="noopener">ollama.com/download</a> and run it.</p>
+        </div>
+        <div data-os="mac" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">macOS · Homebrew</span><button class="copy">copy</button></div>
+<pre><code>brew install ollama
+brew services start ollama</code></pre>
+          </div>
+          <p class="i18n" data-ko='두 번째 줄은 Ollama 서버를 백그라운드에서 켜고, 로그인할 때마다 자동으로 켜지게 합니다. Homebrew가 없다면 <a class="inline-link" href="https://ollama.com/download/mac" target="_blank" rel="noopener">ollama.com/download</a> 에서 앱을 받아 응용 프로그램 폴더로 옮긴 뒤 한 번 실행하세요.'>The second line starts the Ollama server in the background and keeps it starting at every login. No Homebrew? Download the app from <a class="inline-link" href="https://ollama.com/download/mac" target="_blank" rel="noopener">ollama.com/download</a>, move it to Applications and open it once.</p>
+        </div>
+        <div data-os="linux" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Linux</span><button class="copy">copy</button></div>
+            <pre><code>curl -fsSL https://ollama.com/install.sh | sh</code></pre>
+          </div>
+          <p class="i18n" data-ko='스크립트가 Ollama를 설치하고 서비스로 등록하므로 바로 실행됩니다.'>The script installs Ollama and registers it as a service, so it is already running.</p>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='동작 확인'>verify it works</span><button class="copy">copy</button></div>
+          <pre><code>ollama --version</code></pre>
+        </div>
+        <p class="i18n" data-ko='이제 모델을 내려받습니다. 합쳐서 약 <strong>4.5 GB</strong> 이므로 <strong>집에서 미리</strong> 받아 오세요. 수업 중에 40명이 동시에 받으면 학교 와이파이가 버티지 못합니다.'>Now download the models. Together they are about <strong>4.5 GB</strong>, so <strong>do this at home before class</strong>: 40 people downloading at once will overwhelm the campus Wi-Fi.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템'>all systems</span><button class="copy">copy</button></div>
+<pre><code>ollama pull gemma3:4b
+ollama pull bge-m3</code></pre>
+        </div>
+        <div class="tree">
+          <table>
+            <tr><td>gemma3:4b</td><td class="i18n" data-ko='Google의 40억 파라미터 모델 (3.3 GB). 한국어를 읽고 쓸 수 있고, <strong>사진도 읽습니다</strong>. 오늘의 주 모델입니다.'>Google's 4-billion-parameter model (3.3 GB). Reads and writes Korean and <strong>can also read photos</strong>. Our main model today.</td></tr>
+            <tr><td>bge-m3</td><td class="i18n" data-ko='임베딩 모델 (1.2 GB). 글을 숫자 벡터로 바꿔서 &quot;뜻이 비슷한 글&quot; 을 찾게 해 줍니다. 한국어에 강합니다. 3단계(RAG)에서 씁니다.'>An embedding model (1.2 GB). Turns text into a vector of numbers so we can find "text with a similar meaning". Strong in Korean. Used in step 3 (RAG).</td></tr>
+            <tr><td>exaone3.5:2.4b</td><td class="i18n" data-ko='<strong>선택</strong>: LG AI연구원의 한국어 특화 모델 (1.6 GB). 1단계에서 모델끼리 비교할 때 씁니다.'><strong>Optional</strong>: LG AI Research's Korean-focused model (1.6 GB), for comparing models in step 1.</td></tr>
+          </table>
+        </div>
+        <p class="i18n" data-ko='첫 질문을 해 보세요. 처음에는 모델을 메모리에 올리느라 몇 초~수십 초 걸립니다:'>Ask your first question. The first answer takes a few seconds to load the model into memory:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템'>all systems</span><button class="copy">copy</button></div>
+<pre><code>ollama list
+ollama run gemma3:4b "시설관리자를 한 문장으로 소개해 줘"</code></pre>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='<code class="ic">ollama list</code> 에 <code class="ic">gemma3:4b</code> 와 <code class="ic">bge-m3</code> 가 보이고, 한국어 한 문장이 출력되면 성공입니다. 대화형으로 쓰려면 따옴표 없이 <code class="ic">ollama run gemma3:4b</code> 를 실행하고, 끝낼 때는 <code class="ic">/bye</code> 를 입력하세요.'><code class="ic">ollama list</code> shows <code class="ic">gemma3:4b</code> and <code class="ic">bge-m3</code>, and you get one sentence in Korean. For a chat, run <code class="ic">ollama run gemma3:4b</code> without the question; type <code class="ic">/bye</code> to leave.</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <div class="ci">!</div>
+          <div><span class="ct i18n" data-ko='문제가 생기면'>If something goes wrong</span>
+            <p class="i18n" data-ko='<code class="ic">ollama</code> 명령을 찾을 수 없다: 터미널을 새로 여세요. <code class="ic">could not connect to ollama</code>: 서버가 꺼져 있습니다. Ollama 앱을 실행하거나 다른 터미널에서 <code class="ic">ollama serve</code> 를 실행하세요.'><code class="ic">ollama</code> not found: open a new terminal. <code class="ic">could not connect to ollama</code>: the server isn't running. Open the Ollama app, or run <code class="ic">ollama serve</code> in a second terminal.</p>
+            <p class="i18n" data-ko='메모리는 <strong>8 GB 이상</strong> 필요합니다. 8 GB 노트북이라면 브라우저 탭과 다른 프로그램을 닫으세요. GPU가 없어도 동작하지만 답이 느립니다 (초당 5~15 토큰). 너무 느리면 옆 사람과 짝을 지어 하세요.'>You need <strong>8 GB of RAM or more</strong>. On an 8 GB laptop, close browser tabs and other apps first. No GPU is fine, just slower (about 5–15 tokens per second). If it's too slow, pair up with a neighbour.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s0"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 1 : PROJECT + FIRST PROMPTS -->
+    <section class="step" id="s1">
+      <div class="stepnum"><div class="dot"><span>1</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='프로젝트 만들기와 Python에서 첫 대화'>Create the project and talk to the model from Python</h2>
+        <p class="i18n" data-ko='4주차와 같은 방법으로 새 uv 프로젝트를 만들고 라이브러리를 추가합니다. <strong>torch나 transformers는 필요 없습니다</strong>: 모델은 Ollama가 실행하고, Python은 작은 <code class="ic">ollama</code> 패키지로 질문만 보냅니다.'>Create a new uv project as in Week 4 and add the libraries. <strong>No torch or transformers needed</strong>: Ollama runs the model, and Python only sends it questions through the small <code class="ic">ollama</code> package.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템'>all systems</span><button class="copy">copy</button></div>
+<pre><code>uv init --python 3.12 --no-package facility-llm
+cd facility-llm
+uv add ollama pydantic pandas matplotlib numpy pypdf</code></pre>
+        </div>
+        <p class="i18n" data-ko='이번 주 데이터를 <strong>프로젝트 폴더 안에서</strong> 받으세요:'>Download this week's data <strong>inside the project folder</strong>:</p>
+        <div data-os="win-cmd" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · Command Prompt</span><button class="copy">copy</button></div>
+<pre><code>curl -L -o week09_data.zip https://mugojames254.github.io/smart_facility_coursework/week09_data.zip
+tar -xf week09_data.zip</code></pre>
+          </div>
+        </div>
+        <div data-os="win-ps" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · PowerShell</span><button class="copy">copy</button></div>
+<pre><code>curl.exe -L -o week09_data.zip https://mugojames254.github.io/smart_facility_coursework/week09_data.zip
+tar -xf week09_data.zip</code></pre>
+          </div>
+        </div>
+        <div data-os="mac linux" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">macOS / Linux</span><button class="copy">copy</button></div>
+<pre><code>curl -L -o week09_data.zip https://mugojames254.github.io/smart_facility_coursework/week09_data.zip
+unzip week09_data.zip</code></pre>
+          </div>
+        </div>
+        <div class="tree">
+          <table>
+            <tr><td>complaints_ko.csv</td><td class="i18n" data-ko='<strong>가상</strong> 민원 24건 (카카오톡, 웹, 전화). 시설팀이 정한 정답 분류와 우선순위가 함께 들어 있습니다.'>24 <strong>synthetic</strong> complaints (KakaoTalk, web, phone), with the category and priority a facility team would give.</td></tr>
+            <tr><td>ahu2_manual_ko.pdf</td><td class="i18n" data-ko='공조기 AHU-2 의 6쪽짜리 <strong>가상</strong> 운전·유지관리 매뉴얼: 필터, 벨트, 알람 코드, 동절기 운전, 안전.'>A 6-page <strong>fictional</strong> O&amp;M manual for air handling unit AHU-2: filters, belts, alarm codes, winter operation, safety.</td></tr>
+            <tr><td>site_photo_corridor.jpg</td><td class="i18n" data-ko='4주차 UGV 주행 때 찍은 실제 복도 사진.'>The real corridor photo from the Week 4 UGV run.</td></tr>
+          </table>
+        </div>
+        <p class="i18n" data-ko='새 파일 <code class="ic">first_chat.py</code> 를 만드세요. 강의의 <strong>프롬프트 5요소</strong> 중 역할·맥락은 <code class="ic">system</code> 메시지에, 과제는 <code class="ic">user</code> 메시지에 들어갑니다:'>Create <code class="ic">first_chat.py</code>. From the lecture's <strong>five parts of a prompt</strong>, the role and context go in the <code class="ic">system</code> message and the task goes in the <code class="ic">user</code> message:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">first_chat.py</span><button class="copy">copy</button></div>
+<pre><code>import sys
+import ollama
+
+MODEL = sys.argv[1] if len(sys.argv) &gt; 1 else "gemma3:4b"
+
+messages = [
+    <span class="cmt"># Role + context: who the model is and what it can't know by itself</span>
+    {"role": "system", "content": (
+        "You are an assistant for the facility team of a university engineering building. "
+        "Answer in Korean, in at most 3 short sentences. If you are not sure, say so."
+    )},
+    <span class="cmt"># Task</span>
+    {"role": "user", "content": "3층 화장실 천장에서 물이 새요. 시설팀은 먼저 무엇을 해야 하나요?"},
+]
+
+stream = ollama.chat(model=MODEL, messages=messages, stream=True)
+for chunk in stream:
+    print(chunk.message.content, end="", flush=True)
+    if chunk.done:
+        last = chunk
+
+print("\n")
+print(f"Model          : {MODEL}")
+print(f"Prompt tokens  : {last.prompt_eval_count}")
+print(f"Answer tokens  : {last.eval_count}")
+print(f"Speed          : {last.eval_count / (last.eval_duration / 1e9):.1f} tokens/s")</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 · uv run 은 가상 환경을 자동으로 씁니다'>run · uv run uses the project environment for you</span><button class="copy">copy</button></div>
+          <pre><code>uv run first_chat.py</code></pre>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='답이 한 글자씩 흘러나오고(스트리밍), 마지막에 토큰 수와 속도가 출력됩니다. 문장은 사람마다 조금씩 다릅니다. 예: <code class="ic">Prompt tokens : 73</code>, <code class="ic">Answer tokens : 67</code>.'>The answer streams out word by word, then the token counts and speed are printed. Your wording will differ, for example <code class="ic">Prompt tokens : 73</code>, <code class="ic">Answer tokens : 67</code>.</p>
+          </div>
+        </div>
+        <p class="i18n" data-ko='강의 4번 슬라이드: 같은 뜻이라도 한국어는 토큰이 더 많이 듭니다. 직접 세어 봅시다. <code class="ic">count_tokens.py</code>:'>Lecture slide 4: Korean often needs more tokens for the same meaning. Count them yourself in <code class="ic">count_tokens.py</code>:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">count_tokens.py</span><button class="copy">copy</button></div>
+<pre><code>import ollama
+
+MODEL = "gemma3:4b"
+sentences = {
+    "English": "The chiller in B2 is overheating.",
+    "Korean ": "지하 2층 냉동기가 과열됐어요.",
+}
+
+for lang, text in sentences.items():
+    <span class="cmt"># raw=True sends the text exactly as written; num_predict=1 stops after one new token</span>
+    r = ollama.generate(model=MODEL, prompt=text, raw=True, options={"num_predict": 1})
+    print(f"{lang}: {len(text):2d} characters -&gt; {r.prompt_eval_count} tokens   {text}")</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 결과 예시'>example output</span><button class="copy">copy</button></div>
+<pre><code><span class="pr">$ </span>uv run count_tokens.py
+English: 33 characters -> 9 tokens   The chiller in B2 is overheating.
+Korean : 17 characters -> 13 tokens   지하 2층 냉동기가 과열됐어요.</code></pre>
+        </div>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <ul>
+              <li class="i18n" data-ko='<code class="ic">system</code> 메시지에서 &quot;3 short sentences&quot; 를 지우면 답이 어떻게 바뀌나요? 형식 지시가 왜 중요한지 보입니다.'>Delete "3 short sentences" from the <code class="ic">system</code> message. How does the answer change? This is why the format instruction matters.</li>
+              <li class="i18n" data-ko='<code class="ic">ollama.chat(...)</code> 에 <code class="ic">options={&quot;temperature&quot;: 0}</code> 을 넣고 두 번 실행해 보세요. 그다음 <code class="ic">1.5</code> 로 바꿔 보세요. 온도가 높을수록 답이 다양해집니다.'>Add <code class="ic">options={"temperature": 0}</code> to <code class="ic">ollama.chat(...)</code> and run twice, then try <code class="ic">1.5</code>. The higher the temperature, the more the answers vary.</li>
+              <li class="i18n" data-ko='모델 비교 (선택): <code class="ic">ollama pull exaone3.5:2.4b</code> 후 <code class="ic">uv run first_chat.py exaone3.5:2.4b</code>. 어느 모델의 한국어가 더 자연스럽고, 어느 쪽이 더 빠른가요?'>Compare models (optional): <code class="ic">ollama pull exaone3.5:2.4b</code>, then <code class="ic">uv run first_chat.py exaone3.5:2.4b</code>. Which one writes more natural Korean, and which is faster?</li>
+            </ul>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s1"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 2 : TRIAGE -->
+    <section class="step" id="s2">
+      <div class="stepnum"><div class="dot"><span>2</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='민원 분류: 자유로운 글을 JSON으로'>Complaint triage: free text in, JSON out</h2>
+        <p class="i18n" data-ko='민원은 자유로운 글로 들어오지만, 작업지시 시스템은 <strong>정해진 칸</strong> (분류, 우선순위, 위치, 담당 공종) 이 필요합니다. <code class="ic">pydantic</code> 으로 원하는 칸을 정의하고 <code class="ic">format=</code> 으로 넘기면, Ollama가 모델이 <strong>그 모양의 JSON만</strong> 쓰도록 강제합니다.'>Complaints arrive as free text, but a work-order system needs <strong>fixed fields</strong>: category, priority, location, trade. We define the fields with <code class="ic">pydantic</code> and pass them as <code class="ic">format=</code>; Ollama then forces the model to write <strong>only JSON of that shape</strong>.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">triage.py</span><button class="copy">copy</button></div>
+<pre><code>import re
+from typing import Literal
+
+import matplotlib.pyplot as plt
+import ollama
+import pandas as pd
+from pydantic import BaseModel
+
+MODEL = "gemma3:4b"
+
+
+<span class="cmt"># 1. The shape of the answer we want back (the "Format" part of the prompt)</span>
+class Triage(BaseModel):
+    category: Literal["plumbing", "hvac", "electrical", "cleaning", "safety", "elevator", "other"]
+    priority: Literal["urgent", "high", "normal", "low"]
+    location: str        <span class="cmt"># building / floor / room, as written in the complaint</span>
+    trade: str           <span class="cmt"># who should go: plumber, electrician, ...</span>
+    summary_en: str      <span class="cmt"># one short English sentence</span>
+
+
+SYSTEM = """You triage facility complaints for a university engineering building.
+Read the complaint (in Korean) and fill in every field.
+category guide:
+- plumbing: water leaks, pipes, toilets, drains, water dispensers
+- hvac: air conditioning, heating, ventilation, air quality, air purifiers
+- electrical: lights, sockets, power, projectors, burning smell from wiring
+- cleaning: cleaning, rubbish, mould, toilet paper and other supplies
+- safety: fire extinguishers, exit signs, blocked escape routes, things that may fall
+- elevator: lifts and their buttons
+- other: anything else (doors, windows, paint, parking)
+priority rules:
+- urgent: people may get hurt now, someone is trapped, fire/smoke/burning smell, water pouring
+- high: a room cannot be used, a safety device is missing or off, a class is affected
+- normal: needs fixing this week
+- low: cosmetic or supplies
+Example: "2층 복도 전등 하나가 나갔어요" -&gt; category electrical, priority normal, location "2층 복도", trade electrician."""
+
+
+def mask_phone(text: str) -&gt; str:
+    """Privacy first: hide phone numbers before the text goes to any model."""
+    return re.sub(r"01[0-9]-?\d{3,4}-?\d{4}", "010-****-****", text)
+
+
+def triage(text: str) -&gt; Triage:
+    for temperature in (0, 0.3):             <span class="cmt"># 0 = same input, same answer; 0.3 = second try</span>
+        try:
+            r = ollama.chat(
+                model=MODEL,
+                messages=[{"role": "system", "content": SYSTEM},
+                          {"role": "user", "content": mask_phone(text)}],
+                format=Triage.model_json_schema(),   <span class="cmt"># force valid JSON in this shape</span>
+                options={"temperature": temperature, "repeat_penalty": 1.1, "num_predict": 300},
+            )
+            return Triage.model_validate_json(r.message.content)
+        except Exception as e:               <span class="cmt"># small models sometimes break the JSON</span>
+            print(f"   retrying ({e.__class__.__name__})")
+    raise RuntimeError("model failed twice on: " + text)
+
+
+<span class="cmt"># 2. Triage every complaint</span>
+df = pd.read_csv("data/complaints_ko.csv")
+rows = []
+for _, c in df.iterrows():
+    t = triage(c.text)
+    print(f"{c.id}  {t.category:&lt;10} {t.priority:&lt;7} {t.location:&lt;16} {t.summary_en}")
+    rows.append(t.model_dump())
+out = pd.concat([df, pd.DataFrame(rows)], axis=1)
+out.to_csv("triage_results.csv", index=False, encoding="utf-8-sig")
+
+<span class="cmt"># 3. How often did the model agree with the facility team's labels?</span>
+cat_acc = (out.category == out.true_category).mean()
+pri_acc = (out.priority == out.true_priority).mean()
+print(f"\nCategory accuracy: {cat_acc:.0%}   Priority accuracy: {pri_acc:.0%}")
+print("\nDisagreements:")
+print(out[(out.category != out.true_category) | (out.priority != out.true_priority)]
+      [["id", "category", "true_category", "priority", "true_priority"]].to_string(index=False))
+
+<span class="cmt"># 4. Count complaints per category</span>
+counts = out.category.value_counts()
+ax = counts.plot.barh(color="#0e7b7b", figsize=(7, 4))
+ax.invert_yaxis()
+ax.set_xlabel("complaints")
+ax.set_title("Complaints by category (model triage)")
+plt.tight_layout()
+plt.savefig("triage_by_category.png", dpi=150)
+print("\nSaved triage_results.csv and triage_by_category.png")</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 · 민원 24건, 노트북에 따라 20초~3분'>run · 24 complaints, 20 s to 3 min depending on your laptop</span><button class="copy">copy</button></div>
+          <pre><code>uv run triage.py</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 결과 예시 (일부)'>example output (shortened)</span><button class="copy">copy</button></div>
+<pre><code>C01  plumbing   urgent  3층 남자화장실   Water leaking from the ceiling in the 3rd floor men's restroom...
+C02  hvac       high    502호 강의실     Air conditioning not working in classroom 502...
+C05  elevator   urgent  1층 로비         Elevator stuck between floors 2 and 3 with occupants inside.
+C07  electrical urgent  연구실 407호     Burning smell reported from Lab 407...
+...
+Category accuracy: 100%   Priority accuracy: 46%</code></pre>
+        </div>
+        <figure>
+          <img src="assets/week09_triage_by_category.png" alt="Horizontal bar chart of complaints by category: plumbing 5, hvac 4, safety 4, electrical 3, cleaning 3, other 3, elevator 2" loading="lazy">
+          <figcaption class="i18n" data-ko='triage_by_category.png: 모델이 분류한 민원 수. 이런 집계가 강의 13번 슬라이드의 계절별 패턴의 출발점입니다.'>triage_by_category.png: complaints per category as triaged by the model. Counts like these are where the seasonal pattern on lecture slide 13 starts.</figcaption>
+        </figure>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='분류는 잘하는데, 우선순위는?'>Good at category, weak at priority</span>
+            <p class="i18n" data-ko='저희 테스트에서 분류는 24건 모두 맞았지만 우선순위는 절반도 못 맞혔습니다. 모델은 대부분을 &quot;high&quot; 로 올려 버립니다. 강의 25번 슬라이드의 평가표와 같은 모습입니다: <strong>정답이 있는 테스트 세트로 점수를 매겨야</strong> 이런 약점이 보입니다. 숫자는 노트북과 모델 버전에 따라 조금 다를 수 있습니다.'>In our test the category was right for all 24 complaints, but less than half of the priorities were. The model pushes most of them up to "high". It's the same picture as the scorecard on lecture slide 25: <strong>you only see weaknesses like this when you score against a labelled test set</strong>. Your numbers may differ slightly by laptop and model version.</p>
+          </div>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <ul>
+              <li class="i18n" data-ko='<code class="ic">SYSTEM</code> 의 <strong>priority rules</strong> 를 고쳐서 우선순위 정확도를 올려 보세요. 예: &quot;high 는 강의실을 쓸 수 없을 때만&quot;. 고칠 때마다 같은 24건으로 다시 실행해 점수를 비교하세요.'>Rewrite the <strong>priority rules</strong> in <code class="ic">SYSTEM</code> to raise priority accuracy, for example "high only when a room can't be used". After each change, re-run the same 24 complaints and compare the score.</li>
+              <li class="i18n" data-ko='<code class="ic">triage_results.csv</code> 를 열어 C07 을 보세요. 전화번호가 <code class="ic">010-****-****</code> 로 가려진 채 모델에 들어갔습니다. 개인정보는 모델에 보내기 <strong>전에</strong> 지웁니다.'>Open <code class="ic">triage_results.csv</code> and look at C07: the phone number reached the model as <code class="ic">010-****-****</code>. Personal data is removed <strong>before</strong> it goes to any model.</li>
+              <li class="i18n" data-ko='민원을 직접 하나 써서 <code class="ic">complaints_ko.csv</code> 끝에 추가해 보세요. 모델이 맞게 분류하나요?'>Write a complaint of your own and add it to the end of <code class="ic">complaints_ko.csv</code>. Does the model triage it correctly?</li>
+            </ul>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s2"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 3 : RAG -->
+    <section class="step" id="s3">
+      <div class="stepnum"><div class="dot"><span>3</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='매뉴얼에게 묻기: 작은 RAG 만들기'>Ask the manual: build a mini RAG</h2>
+        <p class="i18n" data-ko='모델은 우리 건물의 매뉴얼을 모릅니다. 물어보면 그럴듯한 답을 <strong>지어냅니다</strong> (환각). RAG 는 질문과 관련된 매뉴얼 부분을 먼저 <strong>찾아서</strong> 프롬프트에 붙이고, &quot;이것만 보고 답하라&quot; 고 지시합니다. 순서는 네 단계입니다:'>The model has never seen our building's manual. Ask it anyway and it will <strong>make up</strong> a plausible answer (hallucination). RAG first <strong>finds</strong> the parts of the manual related to the question, pastes them into the prompt, and says "answer only from these". Four steps:</p>
+        <div class="tree">
+          <table>
+            <tr><td>1 · chunk</td><td class="i18n" data-ko='PDF 글을 4줄씩 작은 조각으로 자르고, 각 조각의 쪽 번호를 기억합니다.'>Cut the PDF text into small chunks of 4 lines and remember each chunk's page.</td></tr>
+            <tr><td>2 · embed</td><td class="i18n" data-ko='<code class="ic">bge-m3</code> 로 각 조각을 숫자 벡터로 바꿉니다. 뜻이 비슷하면 벡터도 비슷합니다.'>Turn each chunk into a vector with <code class="ic">bge-m3</code>. Similar meaning, similar vectors.</td></tr>
+            <tr><td>3 · search</td><td class="i18n" data-ko='질문도 벡터로 바꿔 가장 비슷한 조각 3개를 찾습니다 (코사인 유사도).'>Turn the question into a vector too and find the 3 most similar chunks (cosine similarity).</td></tr>
+            <tr><td>4 · answer</td><td class="i18n" data-ko='찾은 조각만 보고 답하게 하고, 쪽 번호 <code class="ic">[p.4]</code> 를 달게 합니다.'>Have the model answer only from those chunks, citing the page like <code class="ic">[p.4]</code>.</td></tr>
+          </table>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">ask_manual.py</span><button class="copy">copy</button></div>
+<pre><code>import sys
+
+import numpy as np
+import ollama
+from pypdf import PdfReader
+
+CHAT_MODEL = "gemma3:4b"
+EMBED_MODEL = "bge-m3"          <span class="cmt"># turns text into vectors; works well for Korean</span>
+PDF = "data/ahu2_manual_ko.pdf"
+
+<span class="cmt"># 1. Read the manual and cut it into small chunks, remembering the page of each</span>
+chunks = []                      <span class="cmt"># list of (page, text)</span>
+for page_no, page in enumerate(PdfReader(PDF).pages, start=1):
+    lines = [ln.strip() for ln in page.extract_text().splitlines() if ln.strip()]
+    for i in range(0, len(lines), 4):                 <span class="cmt"># 4 lines per chunk</span>
+        chunks.append((page_no, " ".join(lines[i:i + 4])))
+print(f"{len(chunks)} chunks from {PDF}")
+
+<span class="cmt"># 2. Embed every chunk once: text -&gt; vector of numbers</span>
+vectors = np.array(ollama.embed(model=EMBED_MODEL, input=[t for _, t in chunks]).embeddings)
+vectors /= np.linalg.norm(vectors, axis=1, keepdims=True)
+
+
+def search(question: str, k: int = 3):
+    q = np.array(ollama.embed(model=EMBED_MODEL, input=question).embeddings[0])
+    scores = vectors @ (q / np.linalg.norm(q))        <span class="cmt"># cosine similarity</span>
+    best = np.argsort(scores)[::-1][:k]
+    return [(chunks[i][0], chunks[i][1], scores[i]) for i in best]
+
+
+def ask(question: str) -&gt; str:
+    hits = search(question)
+    print("\nRetrieved:")
+    for page, text, score in hits:
+        print(f"  p.{page}  score {score:.2f}  {text[:70]}...")
+    sources = "\n".join(f"[p.{page}] {text}" for page, text, _ in hits)
+    r = ollama.chat(model=CHAT_MODEL, options={"temperature": 0}, messages=[
+        {"role": "system", "content": (
+            "Answer the facility technician's question in Korean using ONLY the sources. "
+            "Cite the page like [p.4] after each fact. "
+            "If the sources do not contain the answer, reply exactly: 매뉴얼에 없는 내용입니다.")},
+        {"role": "user", "content": f"Sources:\n{sources}\n\nQuestion: {question}"},
+    ])
+    return r.message.content
+
+
+if __name__ == "__main__":
+    question = sys.argv[1] if len(sys.argv) &gt; 1 else "AHU-2 프리필터는 언제 교체해야 하나요?"
+    print(f"\nQ: {question}")
+    print("A:", ask(question))</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 · 질문을 따옴표 안에 넣으세요'>run · put your question in quotes</span><button class="copy">copy</button></div>
+<pre><code>uv run ask_manual.py
+uv run ask_manual.py "E05 알람이 뜨면 어떻게 해야 하나요?"
+uv run ask_manual.py "냉각탑 청소 주기는 얼마인가요?"</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 결과 예시'>example output</span><button class="copy">copy</button></div>
+<pre><code>Q: AHU-2 프리필터는 언제 교체해야 하나요?
+
+Retrieved:
+  p.3  score 0.76  봄철 황사·미세먼지 기간(3월~5월)에는 필터가 빨리 막히므로 프리필터 교체 주기를...
+  p.3  score 0.66  4. 필터 관리 프리필터(G4)는 3개월마다 교체한다. 단, 필터 차압이 150 Pa 을...
+  p.1  score 0.54  AHU-2 공조기 운전·유지관리 매뉴얼 Air Handling Unit AHU-2 ...
+A: 프리필터(G4)는 3개월마다 교체해야 합니다. 단, 필터 차압이 150 Pa을 넘으면 즉시 교체해야 합니다 [p.3].
+
+Q: 냉각탑 청소 주기는 얼마인가요?
+A: 매뉴얼에 없는 내용입니다.</code></pre>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='답에 쪽 번호가 붙고, 매뉴얼에 없는 질문 (냉각탑은 AHU-2 매뉴얼에 없습니다) 에는 <code class="ic">매뉴얼에 없는 내용입니다.</code> 라고 답해야 합니다. 지어내지 않는 것도 중요한 기능입니다.'>Answers carry a page number, and a question the manual can't answer (cooling towers aren't in the AHU-2 manual) gets <code class="ic">매뉴얼에 없는 내용입니다.</code> Not making things up is a feature too.</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <div class="ci">!</div>
+          <div><span class="ct i18n" data-ko='자세히 보면'>Look closer</span>
+            <p class="i18n" data-ko='위 예시에서 가장 점수가 높은 조각은 &quot;봄철 미세먼지 기간에는 프리필터를 <strong>2개월</strong>마다&quot; 였는데, 답에는 이 내용이 빠졌습니다. 3월에 이 답만 믿으면 필터를 늦게 바꾸게 됩니다. <strong>출처가 붙어 있으면 원문을 확인할 수 있습니다</strong>: 그래서 쪽 번호가 중요합니다.'>In the example above, the top-scoring chunk said "in the spring fine-dust season, change the pre-filter every <strong>2 months</strong>", yet the answer left it out. Trust that answer in March and the filter is changed late. <strong>Because the answer cites its source, you can check the original</strong>: that is why page numbers matter.</p>
+          </div>
+        </div>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <ul>
+              <li class="i18n" data-ko='RAG 없이 물어보면? <code class="ic">ollama run gemma3:4b &quot;AHU-2 의 E05 알람은 무슨 뜻이야?&quot;</code>. 모델이 지어낸 답과 매뉴얼을 비교하세요.'>What happens without RAG? <code class="ic">ollama run gemma3:4b "AHU-2 의 E05 알람은 무슨 뜻이야?"</code>. Compare the made-up answer with the manual.</li>
+              <li class="i18n" data-ko='조각 크기를 4줄에서 1줄, 10줄로 바꿔 보세요. 검색 점수와 답이 어떻게 달라지나요?'>Change the chunk size from 4 lines to 1 and to 10. How do the scores and answers change?</li>
+              <li class="i18n" data-ko='매뉴얼 내용에 대한 질문 3개와 매뉴얼에 없는 질문 2개를 만들어 보세요. 5개 중 몇 개를 맞혔나요?'>Write 3 questions the manual can answer and 2 it can't. How many of the 5 does it get right?</li>
+            </ul>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s3"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 4 : VISION -->
+    <section class="step" id="s4">
+      <div class="stepnum"><div class="dot"><span>4</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='사진 점검: 비전 모델로 순회점검 보고서 초안 쓰기'>Photo inspection: a vision model drafts the inspection report</h2>
+        <p class="i18n" data-ko='<code class="ic">gemma3:4b</code> 는 사진도 읽습니다. 4주차 복도 사진을 보내고 안전·관리 문제를 JSON 목록으로 받은 뒤, 사람이 검토하고 서명할 <strong>마크다운 보고서</strong> 로 만듭니다.'><code class="ic">gemma3:4b</code> can read photos too. We send it the Week 4 corridor photo, get the safety and housekeeping findings back as a JSON list, and turn them into a <strong>markdown report</strong> that a person reviews and signs.</p>
+        <figure>
+          <img src="assets/week04_site_photo.jpg" alt="The corridor from Week 4: shelves and a waste bag on the left, wooden wall panels on the right, a stair door with an exit sign at the far end" loading="lazy" style="max-height:420px;object-fit:contain">
+          <figcaption class="i18n" data-ko='data/site_photo_corridor.jpg: 강의 17번 슬라이드에서 사람이 찾은 항목은 선반 적치물, 바닥의 폐기물 봉투, 유도등, 소화기였습니다.'>data/site_photo_corridor.jpg. On lecture slide 17, a person found: shelving narrowing the corridor, a waste bag on the floor, the exit sign and the fire extinguisher.</figcaption>
+        </figure>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">inspect_photo.py</span><button class="copy">copy</button></div>
+<pre><code>import sys
+from datetime import date
+from typing import Literal
+
+import ollama
+from pydantic import BaseModel, Field
+
+MODEL = "gemma3:4b"             <span class="cmt"># gemma3 can read images as well as text</span>
+PHOTO = sys.argv[1] if len(sys.argv) &gt; 1 else "data/site_photo_corridor.jpg"
+
+
+class Finding(BaseModel):
+    item: str = Field(description="항목, 한국어 (예: 소화기)")
+    where: str = Field(description="사진 속 위치, 한국어 (예: 왼쪽 선반 아래)")
+    issue: str = Field(description="문제 내용 한 문장, 한국어. 문제가 없으면 '이상 없음'")
+    severity: Literal["high", "medium", "low", "ok"]
+
+
+class Inspection(BaseModel):
+    findings: list[Finding]
+
+
+PROMPT = """당신은 대학 건물 시설팀의 순회점검 담당자입니다.
+이 복도 사진을 보고 안전·관리 문제를 3~6개 찾으세요:
+피난통로 적치물, 걸려 넘어질 위험, 폐기물, 소화기, 유도등, 파손, 누수.
+제자리에 있고 문제없는 안전 설비도 severity "ok" 로 적으세요.
+사진에서 실제로 보이는 것만 적고, 모든 내용을 한국어로 쓰세요."""
+
+r = ollama.chat(
+    model=MODEL,
+    messages=[{"role": "user", "content": PROMPT, "images": [PHOTO]}],
+    format=Inspection.model_json_schema(),
+    options={"temperature": 0, "repeat_penalty": 1.1},
+)
+result = Inspection.model_validate_json(r.message.content)
+
+<span class="cmt"># Write a short inspection report a person must review and sign</span>
+order = {"high": 0, "medium": 1, "low": 2, "ok": 3}
+lines = [f"# 순회점검 보고서 (초안) — {date.today()}", "",
+         f"사진: `{PHOTO}` · 작성: {MODEL} (AI 초안)", "",
+         "| # | 항목 | 위치 | 내용 | 심각도 |", "|---|---|---|---|---|"]
+for i, f in enumerate(sorted(result.findings, key=lambda f: order[f.severity]), start=1):
+    lines.append(f"| {i} | {f.item} | {f.where} | {f.issue} | {f.severity} |")
+lines += ["", "검토자 (Reviewed by): ____________   서명: ________", "",
+          "&gt; AI가 작성한 초안입니다. 현장 확인 후 승인하세요."]
+report = "\n".join(lines)
+open("inspection_report.md", "w", encoding="utf-8").write(report)
+print(report)
+print("\nSaved inspection_report.md")</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 · 사진은 텍스트보다 오래 걸립니다'>run · photos take longer than text</span><button class="copy">copy</button></div>
+          <pre><code>uv run inspect_photo.py</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='inspection_report.md 예시'>example inspection_report.md</span><button class="copy">copy</button></div>
+<pre><code>| # | 항목 | 위치 | 내용 | 심각도 |
+|---|---|---|---|---|
+| 1 | 피난통로 적치물 | 복도 중앙 | 금속 상자 및 기타 물품이 피난통로를 막고 있음. | high |
+| 2 | 걸려 넘어질 위험 | 복도 바닥 | 복도 바닥에 반사광으로 인해 미끄러울 수 있음. | medium |
+| 3 | 유도등 | 천장 | 유도등 일부가 작동하지 않는 것 확인 필요. | medium |
+| 4 | 폐기물 | 금속 선반 위 | 포장재 및 폐기물이 정리되지 않아 깔끔하지 않음. | low |
+| 5 | 소화기 | 벽면 | 소화기 위치 및 작동 상태 점검 필요. | ok |
+
+검토자 (Reviewed by): ____________   서명: ________</code></pre>
+        </div>
+        <div class="callout warn">
+          <div class="ci">!</div>
+          <div><span class="ct i18n" data-ko='사진과 하나하나 대조하세요'>Check every line against the photo</span>
+            <p class="i18n" data-ko='위 예시에서 적치물과 폐기물은 맞습니다. 하지만 &quot;유도등이 작동하지 않는다&quot; 는 사진으로 알 수 없는 내용이고, 폐기물 봉투는 선반 <strong>위</strong> 가 아니라 바닥에 있습니다. 작은 모델은 그럴듯하게 틀립니다. 그래서 보고서는 <strong>초안</strong> 이고, 검토자 서명란이 있습니다.'>In the example above, the stored items and the waste are right. But "the exit sign isn't working" can't be seen in a photo, and the waste bag is on the floor, not <strong>on</strong> the shelf. Small models are wrong in convincing ways. That is why the report is a <strong>draft</strong> with a reviewer's signature line.</p>
+          </div>
+        </div>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <ul>
+              <li class="i18n" data-ko='보고서의 각 줄에 ✓ (맞음) 또는 ✗ (틀림) 를 표시하세요. 모델이 놓친 것은 무엇인가요? 옆 사람의 보고서와 비교해 보세요.'>Mark every line of your report ✓ (correct) or ✗ (wrong). What did the model miss? Compare with your neighbour's report.</li>
+              <li class="i18n" data-ko='건물 복도나 계단을 직접 찍어서 <code class="ic">uv run inspect_photo.py my_photo.jpg</code> 로 실행해 보세요. 사람 얼굴은 찍지 마세요.'>Take your own photo of a corridor or stairwell in our building and run <code class="ic">uv run inspect_photo.py my_photo.jpg</code>. Keep people's faces out of it.</li>
+              <li class="i18n" data-ko='<code class="ic">PROMPT</code> 에 &quot;확실하지 않으면 적지 마세요&quot; 를 추가하면 틀린 항목이 줄어드나요?'>Add "if you are not sure, leave it out" to <code class="ic">PROMPT</code>. Do the wrong findings go away?</li>
+            </ul>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s4"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 5 : AGENT -->
+    <section class="step" id="s5">
+      <div class="stepnum"><div class="dot"><span>5</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='미니 에이전트: 도구를 쓰고, 사람의 승인을 받는 LLM'>Mini agent: an LLM that uses tools and asks for approval</h2>
+        <p class="i18n" data-ko='에이전트는 매 차례 <strong>다음에 할 일 하나</strong> 를 고릅니다: 센서 조회, 매뉴얼 검색, 작업지시 생성, 또는 끝내기. Python이 그 도구를 실행하고 결과를 다시 모델에 알려 줍니다 (계획 → 실행 → 관찰 → 반복). 실제 세상을 바꾸는 <code class="ic">create_work_order</code> 는 <strong>사람이 y 를 눌러야</strong> 실행됩니다.'>Each turn, the agent picks <strong>one next step</strong>: read a sensor, search the manual, create a work order, or finish. Python runs that tool and tells the model the result (plan → act → observe → repeat). <code class="ic">create_work_order</code> changes the real world, so it only runs <strong>when a person types y</strong>.</p>
+        <p class="i18n" data-ko='3단계의 <code class="ic">ask_manual.py</code> 에서 <code class="ic">search</code> 함수를 가져다 씁니다. 같은 폴더에 있어야 합니다. <code class="ic">fm_agent.py</code>:'>It reuses the <code class="ic">search</code> function from step 3's <code class="ic">ask_manual.py</code>, so keep both files in the same folder. <code class="ic">fm_agent.py</code>:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">fm_agent.py</span><button class="copy">copy</button></div>
+<pre><code>import csv
+import sys
+from datetime import datetime
+from typing import Literal
+
+import ollama
+from pydantic import BaseModel
+
+from ask_manual import search       <span class="cmt"># the retrieval function from step 3</span>
+
+MODEL = "gemma3:4b"
+
+<span class="cmt"># ---- 1. The tools: plain Python functions the model may ask us to run ----</span>
+SENSORS = {   <span class="cmt"># pretend BAS readings (in real life: an API or database query)</span>
+    "502호": {"temp_c": 31.5, "setpoint_c": 24, "served_by": "AHU-2", "ahu_alarm": "E01"},
+    "301호": {"temp_c": 23.8, "setpoint_c": 24, "served_by": "AHU-2", "ahu_alarm": None},
+    "407호": {"temp_c": 24.6, "setpoint_c": 24, "served_by": "AHU-2", "ahu_alarm": None},
+}
+
+
+def get_sensor(room: str) -&gt; str:
+    return str(SENSORS.get(room.strip(), "no sensor for that room"))
+
+
+def search_manual(query: str) -&gt; str:
+    return "\n".join(f"[p.{p}] {t}" for p, t, _ in search(query, k=3))
+
+
+def create_work_order(text: str) -&gt; str:
+    <span class="cmt"># This tool changes the real world, so a person must approve it first</span>
+    print(f"\n  &gt;&gt;&gt; The agent wants to create a work order:\n      {text}")
+    if input("  &gt;&gt;&gt; Approve? (y/n) ").strip().lower() != "y":
+        return "REJECTED by the duty manager. Do not create it again."
+    with open("work_orders.csv", "a", newline="", encoding="utf-8-sig") as f:
+        csv.writer(f).writerow([datetime.now().isoformat(timespec="minutes"), text])
+    return "work order created"
+
+
+TOOLS = {"get_sensor": get_sensor, "search_manual": search_manual, "create_work_order": create_work_order}
+
+
+<span class="cmt"># ---- 2. Each turn the model answers with ONE next step in this shape ----</span>
+class Step(BaseModel):
+    thought: str     <span class="cmt"># why, in one sentence</span>
+    tool: Literal["get_sensor", "search_manual", "create_work_order", "finish"]
+    argument: str    <span class="cmt"># room / search text / work-order text / final answer to the user</span>
+
+
+SYSTEM = """You are a facility-management agent for a university building. Work step by step.
+Tools:
+- get_sensor(argument = room, e.g. "502호"): current temperature, setpoint, AHU and its alarm code
+- search_manual(argument = short Korean search text, e.g. "E01 알람 조치"): searches the AHU-2 O&amp;M manual
+- create_work_order(argument = Korean work-order text: location, problem, action from the manual)
+- finish(argument = final answer to the user, in Korean)
+Check the sensor first. If there is an alarm code, look up what to do in the manual before acting,
+and put the manual's action and page in the work order.
+Use one tool per step. Never invent readings or manual content."""
+
+task = sys.argv[1] if len(sys.argv) &gt; 1 else "502호 강의실이 너무 덥다는 민원이 왔어. 원인을 확인하고 필요하면 작업지시를 올려 줘."
+messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": task}]
+print(f"TASK: {task}")
+
+<span class="cmt"># ---- 3. The agent loop: plan -&gt; act -&gt; observe -&gt; repeat ----</span>
+for turn in range(1, 7):
+    r = ollama.chat(model=MODEL, messages=messages, format=Step.model_json_schema(),
+                    options={"temperature": 0, "repeat_penalty": 1.1})
+    step = Step.model_validate_json(r.message.content)
+    print(f"\n[{turn}] {step.tool}({step.argument!r})\n    thought: {step.thought}")
+    if step.tool == "finish":
+        print(f"\nANSWER: {step.argument}")
+        break
+    observation = TOOLS[step.tool](step.argument)
+    print(f"    result : {observation[:160]}")
+    messages.append({"role": "assistant", "content": r.message.content})
+    messages.append({"role": "user", "content": f"Result of {step.tool}: {observation}"})
+else:
+    print("\nStopped after 6 steps without finishing.")</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 · 승인 질문에 y 또는 n'>run · answer the approval question with y or n</span><button class="copy">copy</button></div>
+          <pre><code>uv run fm_agent.py</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 결과 예시'>example output</span><button class="copy">copy</button></div>
+<pre><code>TASK: 502호 강의실이 너무 덥다는 민원이 왔어. 원인을 확인하고 필요하면 작업지시를 올려 줘.
+
+[1] get_sensor('502호')
+    result : {'temp_c': 31.5, 'setpoint_c': 24, 'served_by': 'AHU-2', 'ahu_alarm': 'E01'}
+
+[2] search_manual('E01 알람 조치')
+    result : [p.5] 6. 알람 코드 ... E01 급기 온도 높음 ... 냉수 밸브 개도와 냉수 공급 온도 확인
+
+[3] create_work_order('502호 강의실 급기 온도 높음 (E01 알람) 냉수 밸브 개도와 냉수 공급 온도 확인. p.5 참조')
+
+  >>> The agent wants to create a work order:
+      502호 강의실 급기 온도 높음 (E01 알람) 냉수 밸브 개도와 냉수 공급 온도 확인. p.5 참조
+  >>> Approve? (y/n) y
+    result : work order created
+
+[4] finish('502호 강의실 급기 온도 높음 (E01 알람) 발생 시, 냉수 밸브 개도와 냉수 공급 온도 확인 필요. O&amp;M 매뉴얼 p.5 참조')</code></pre>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='에이전트가 센서 → 매뉴얼 → 작업지시 순서로 진행하고, 승인하면 <code class="ic">work_orders.csv</code> 에 한 줄이 생깁니다. <code class="ic">n</code> 을 누르면 거절된 것을 알고 작업지시 없이 끝내야 합니다.'>The agent goes sensor → manual → work order, and after you approve, <code class="ic">work_orders.csv</code> gets a new line. Type <code class="ic">n</code> and it should accept the rejection and finish without a work order.</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <div class="ci">!</div>
+          <div><span class="ct i18n" data-ko='승인 단계가 왜 필요한지 직접 보기'>See for yourself why the approval step exists</span>
+            <p class="i18n" data-ko='301호는 23.8 °C, 설정 24 °C 로 <strong>정상</strong> 이고 알람도 없습니다. 그런데 저희 테스트에서 에이전트는 매뉴얼의 <strong>동절기</strong> 설정(외기 댐퍼 20 %)을 붙여 작업지시를 만들려고 했습니다. 승인 단계가 없었다면 잘못된 작업지시가 그대로 나갔을 것입니다.'>Room 301 is at 23.8 °C against a 24 °C setpoint: <strong>normal</strong>, with no alarm. Yet in our test the agent tried to raise a work order using the manual's <strong>winter</strong> settings (outdoor-air damper at 20 %). Without the approval step, that wrong work order would have gone out.</p>
+          </div>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='해 보기 · 문제없는 방'>try it · a room with no problem</span><button class="copy">copy</button></div>
+          <pre><code>uv run fm_agent.py "301호 강의실이 덥다는 민원이 왔어. 확인하고 필요하면 작업지시를 올려 줘."</code></pre>
+        </div>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <ul>
+              <li class="i18n" data-ko='<code class="ic">SYSTEM</code> 에 &quot;현재 온도가 설정값의 ±2 °C 안이고 알람이 없으면 작업지시 없이 끝낸다&quot; 같은 규칙을 넣어 301호 문제를 고쳐 보세요.'>Fix the room 301 problem by adding a rule to <code class="ic">SYSTEM</code>, such as "if the temperature is within ±2 °C of the setpoint and there is no alarm, finish without a work order".</li>
+              <li class="i18n" data-ko='<code class="ic">SENSORS</code> 에 방을 하나 더 넣고 알람을 <code class="ic">E03</code> (필터 차압 높음) 으로 해 보세요. 에이전트가 매뉴얼의 필터 교체 기준을 찾아 쓰나요?'>Add a room to <code class="ic">SENSORS</code> with alarm <code class="ic">E03</code> (filter pressure high). Does the agent find the filter rules in the manual and use them?</li>
+              <li class="i18n" data-ko='에이전트가 쓸 수 있는 도구를 하나 더 만들어 보세요. 예: <code class="ic">triage.py</code> 의 <code class="ic">triage()</code> 를 써서 민원을 먼저 분류하는 도구.'>Give the agent one more tool, for example one that triages the complaint first using <code class="ic">triage()</code> from <code class="ic">triage.py</code>.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s5"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- CHEAT SHEET -->
+  <section class="cheat">
+    <h2 class="i18n" data-ko='한 화면 요약 (치트 시트)'>One-screen cheat sheet</h2>
+    <p class="i18n" data-ko='위 내용을 순서대로 정리했습니다 — 흐름을 익힌 뒤 참고용으로 쓰세요.'>Everything above, in order — for reference once you know the flow.</p>
+    <div class="code">
+      <div class="code-head"><span class="code-tag" id="cheatTag">Windows · cmd</span><button class="copy">copy</button></div>
+      <pre><code id="cheatCode"></code></pre>
+    </div>
+  </section>
+
+  <footer>
+    <span class="i18n" data-ko='스마트 시설 관리 · 9주차 실습 · 민원과 매뉴얼은 교육용 가상 데이터, 복도 사진은 수업용 UGV'>Smart Facility Management · Week 9 practical · complaints and manual are synthetic teaching data; corridor photo from the course UGV</span>
+    <a href="https://ollama.com/library" target="_blank" rel="noopener" class="i18n" data-ko='Ollama 모델 목록'>Ollama models</a> ·
+    <a href="https://github.com/ollama/ollama-python" target="_blank" rel="noopener" class="i18n" data-ko='ollama Python 라이브러리'>ollama Python library</a> ·
+    <a href="https://ollama.com/blog/structured-outputs" target="_blank" rel="noopener" class="i18n" data-ko='Ollama 구조화된 출력'>Ollama structured outputs</a> ·
+    <a href="week05.html" class="i18n" data-ko='5주차 메시'>Week 5 meshes</a> ·
+    <a href="setup.html" class="i18n" data-ko='2주차 설치 가이드'>Week 2 setup guide</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var KEY_OS="setup.os", KEY_DONE="week09.done", KEY_THEME="setup.theme", KEY_LANG="setup.lang";
+  var lang="en";
+
+  /* ---- language strings driven by JS ---- */
+  var STR={
+    copy:      { en:"copy",           ko:"복사" },
+    copied:    { en:"copied ✓",       ko:"복사됨 ✓" },
+    markDone:  { en:" Mark step done", ko:" 완료 표시" },
+    stepDone:  { en:" Step complete",  ko:" 완료됨" },
+    langBtn:   { en:"한국어",          ko:"EN" }
+  };
+  var CHEAT_CMT={
+    en:["# 0 · install Ollama (once) and download the models",
+        "# 1 · new project, data, first prompts",
+        "# 2 · complaint triage -> JSON",
+        "# 3 · ask the manual (RAG)",
+        "# 4 · photo inspection report",
+        "# 5 · mini agent with approval"],
+    ko:["# 0 · Ollama 설치 (한 번만) 와 모델 내려받기",
+        "# 1 · 새 프로젝트, 데이터, 첫 프롬프트",
+        "# 2 · 민원 분류 -> JSON",
+        "# 3 · 매뉴얼에게 묻기 (RAG)",
+        "# 4 · 사진 점검 보고서",
+        "# 5 · 승인 받는 미니 에이전트"]
+  };
+
+  /* ---- i18n: capture English HTML, swap on demand ---- */
+  var i18nEls=document.querySelectorAll(".i18n");
+  i18nEls.forEach(function(el){ el._en=el.innerHTML; });
+  function applyLang(l){
+    lang=(l==="ko")?"ko":"en";
+    document.documentElement.setAttribute("lang",lang);
+    i18nEls.forEach(function(el){
+      var ko=el.getAttribute("data-ko");
+      el.innerHTML=(lang==="ko"&&ko!=null)?ko:el._en;
+    });
+    document.querySelectorAll(".copy").forEach(function(b){
+      if(!b.classList.contains("copied")) b.textContent=STR.copy[lang];
+    });
+    document.getElementById("langBtn").textContent=STR.langBtn[lang];
+    renderCheat(currentOS);
+    refresh();
+    try{ localStorage.setItem(KEY_LANG, lang); }catch(e){}
+  }
+
+  /* ---- OS switching ---- */
+  var currentOS="win-cmd";
+  var buttons=document.querySelectorAll(".seg button");
+  function applyOS(os){
+    currentOS=os;
+    document.querySelectorAll("[data-os]").forEach(function(el){
+      var list=el.getAttribute("data-os").split(/\s+/);
+      el.classList.toggle("os-on", list.indexOf(os)!==-1);
+    });
+    buttons.forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.set===os?"true":"false"); });
+    renderCheat(os);
+    try{ localStorage.setItem(KEY_OS, os); }catch(e){}
+  }
+  buttons.forEach(function(b){ b.addEventListener("click", function(){ applyOS(b.dataset.set); }); });
+
+  /* ---- cheat sheet (per-OS, per-lang) ---- */
+  function cheatFor(os){
+    var install = {
+      "win-cmd":["winget install --id Ollama.Ollama -e"],
+      "win-ps":["winget install --id Ollama.Ollama -e"],
+      "mac":["brew install ollama","brew services start ollama"],
+      "linux":["curl -fsSL https://ollama.com/install.sh | sh"]
+    }[os];
+    var curl = os==="win-ps" ? "curl.exe" : "curl";
+    var unzip = (os==="mac"||os==="linux") ? "unzip" : "tar -xf";
+    var c=CHEAT_CMT[lang], L=[];
+    function cm(i){ L.push("<span class='cmt'>"+c[i]+"</span>"); }
+    cm(0); install.forEach(function(x){ L.push(x); });
+    L.push("ollama pull gemma3:4b");
+    L.push("ollama pull bge-m3");
+    cm(1);
+    L.push("uv init --python 3.12 --no-package facility-llm");
+    L.push("cd facility-llm");
+    L.push("uv add ollama pydantic pandas matplotlib numpy pypdf");
+    L.push(curl+" -L -o week09_data.zip https://mugojames254.github.io/smart_facility_coursework/week09_data.zip");
+    L.push(unzip+" week09_data.zip");
+    L.push("uv run first_chat.py");
+    L.push("uv run count_tokens.py");
+    cm(2); L.push("uv run triage.py");
+    cm(3); L.push("uv run ask_manual.py \"E05 알람이 뜨면 어떻게 해야 하나요?\"");
+    cm(4); L.push("uv run inspect_photo.py");
+    cm(5); L.push("uv run fm_agent.py");
+    return L.join("\n");
+  }
+  var tagText={ "win-cmd":"Windows · cmd","win-ps":"Windows · PowerShell","mac":"macOS","linux":"Linux" };
+  function renderCheat(os){
+    document.getElementById("cheatCode").innerHTML=cheatFor(os);
+    document.getElementById("cheatTag").textContent=tagText[os];
+  }
+
+  /* ---- copy buttons ---- */
+  document.addEventListener("click", function(e){
+    var btn=e.target.closest(".copy"); if(!btn) return;
+    var code=btn.closest(".code").querySelector("pre code");
+    var text=code.innerText;
+    function ok(){ btn.classList.add("copied"); var o=STR.copy[lang]; btn.textContent=STR.copied[lang];
+      setTimeout(function(){ btn.classList.remove("copied"); btn.textContent=o; },1400); }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(ok,ok); }
+    else { try{ var t=document.createElement("textarea"); t.value=text; document.body.appendChild(t);
+      t.select(); document.execCommand("copy"); document.body.removeChild(t); ok(); }catch(e){} }
+  });
+
+  /* ---- done tracking + progress ---- */
+  var steps=["s0","s1","s2","s3","s4","s5"], done={};
+  try{ done=JSON.parse(localStorage.getItem(KEY_DONE))||{}; }catch(e){ done={}; }
+  function saveDone(){ try{ localStorage.setItem(KEY_DONE, JSON.stringify(done)); }catch(e){} }
+  function refresh(){
+    var n=0;
+    steps.forEach(function(id){
+      var el=document.getElementById(id);
+      if(done[id]){ el.classList.add("done"); n++; } else { el.classList.remove("done"); }
+      var b=el.querySelector(".done-btn .box");
+      if(b) b.textContent = done[id] ? "✓" : "";
+      var lbl=el.querySelector(".done-btn .done-label");
+      if(lbl) lbl.textContent = done[id] ? STR.stepDone[lang] : STR.markDone[lang];
+    });
+    document.getElementById("pfill").style.width=(n/steps.length*100)+"%";
+  }
+  document.querySelectorAll(".done-btn").forEach(function(b){
+    b.addEventListener("click", function(){ var id=b.dataset.done; done[id]=!done[id]; saveDone(); refresh(); });
+  });
+
+  /* ---- theme toggle ---- */
+  var root=document.documentElement, tb=document.getElementById("themeBtn");
+  try{ var st=localStorage.getItem(KEY_THEME); if(st) root.setAttribute("data-theme",st); }catch(e){}
+  tb.addEventListener("click", function(){
+    var cur=root.getAttribute("data-theme");
+    var mqDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
+    var next = cur ? (cur==="dark"?"light":"dark") : (mqDark?"light":"dark");
+    root.setAttribute("data-theme",next);
+    try{ localStorage.setItem(KEY_THEME,next); }catch(e){}
+  });
+
+  /* ---- language toggle ---- */
+  document.getElementById("langBtn").addEventListener("click", function(){
+    applyLang(lang==="ko"?"en":"ko");
+  });
+
+  /* ---- init ---- */
+  var savedOS="win-cmd";
+  try{ savedOS=localStorage.getItem(KEY_OS)||"win-cmd"; }catch(e){}
+  var savedLang="en";
+  try{ savedLang=localStorage.getItem(KEY_LANG)||"en"; }catch(e){}
+  applyOS(savedOS);
+  applyLang(savedLang);
+})();
+</script>
+</body>
+</html>
