@@ -296,7 +296,7 @@
     <section class="step" id="s0">
       <div class="stepnum"><div class="dot"><span>0</span></div></div>
       <div class="step-body">
-        <h2 class="i18n" data-ko='Ollama 설치와 모델 내려받기 (수업 전에!)'>Install Ollama and download the models (before class!)</h2>
+        <h2 class="i18n" data-ko='Ollama 설치와 모델 내려받기'>Install Ollama and download the models</h2>
         <p class="i18n" data-ko='<strong>Ollama</strong> 는 LLM을 내 컴퓨터에서 실행해 주는 프로그램입니다. 백그라운드에서 작은 서버로 돌아가고, 우리는 터미널이나 Python에서 그 서버에 질문을 보냅니다. 위에서 운영체제를 고르고 설치하세요:'><strong>Ollama</strong> runs LLMs on your own computer. It works as a small server in the background, and we send it questions from the terminal or from Python. Pick your system at the top, then install it:</p>
         <div data-os="win-cmd win-ps" class="osblock">
           <div class="code">
@@ -324,7 +324,7 @@ brew services start ollama</code></pre>
           <div class="code-head"><span class="code-tag i18n" data-ko='동작 확인'>verify it works</span><button class="copy">copy</button></div>
           <pre><code>ollama --version</code></pre>
         </div>
-        <p class="i18n" data-ko='이제 모델을 내려받습니다. 합쳐서 약 <strong>4.5 GB</strong> 이므로 <strong>집에서 미리</strong> 받아 오세요. 수업 중에 40명이 동시에 받으면 학교 와이파이가 버티지 못합니다.'>Now download the models. Together they are about <strong>4.5 GB</strong>, so <strong>do this at home before class</strong>: 40 people downloading at once will overwhelm the campus Wi-Fi.</p>
+        <p class="i18n" data-ko='이제 모델을 내려받습니다. 합쳐서 약 <strong>4.5 GB</strong> 입니다.'>Now download the models. Together they are about <strong>4.5 GB</strong>.</p>
         <div class="code">
           <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템'>all systems</span><button class="copy">copy</button></div>
 <pre><code>ollama pull gemma3:4b
@@ -441,7 +441,7 @@ print(f"Speed          : {last.eval_count / (last.eval_duration / 1e9):.1f} toke
             <p class="i18n" data-ko='답이 한 글자씩 흘러나오고(스트리밍), 마지막에 토큰 수와 속도가 출력됩니다. 문장은 사람마다 조금씩 다릅니다. 예: <code class="ic">Prompt tokens : 73</code>, <code class="ic">Answer tokens : 67</code>.'>The answer streams out word by word, then the token counts and speed are printed. Your wording will differ, for example <code class="ic">Prompt tokens : 73</code>, <code class="ic">Answer tokens : 67</code>.</p>
           </div>
         </div>
-        <p class="i18n" data-ko='강의 4번 슬라이드: 같은 뜻이라도 한국어는 토큰이 더 많이 듭니다. 직접 세어 봅시다. <code class="ic">count_tokens.py</code>:'>Lecture slide 4: Korean often needs more tokens for the same meaning. Count them yourself in <code class="ic">count_tokens.py</code>:</p>
+        <p class="i18n" data-ko='같은 뜻이라도 한국어는 토큰이 더 많이 듭니다. 직접 세어 봅시다. <code class="ic">count_tokens.py</code>:'>Korean often needs more tokens for the same meaning. Count them yourself in <code class="ic">count_tokens.py</code>:</p>
         <div class="code">
           <div class="code-head"><span class="code-tag">count_tokens.py</span><button class="copy">copy</button></div>
 <pre><code>import ollama
@@ -587,12 +587,12 @@ Category accuracy: 100%   Priority accuracy: 46%</code></pre>
         </div>
         <figure>
           <img src="assets/week09_triage_by_category.png" alt="Horizontal bar chart of complaints by category: plumbing 5, hvac 4, safety 4, electrical 3, cleaning 3, other 3, elevator 2" loading="lazy">
-          <figcaption class="i18n" data-ko='triage_by_category.png: 모델이 분류한 민원 수. 이런 집계가 강의 13번 슬라이드의 계절별 패턴의 출발점입니다.'>triage_by_category.png: complaints per category as triaged by the model. Counts like these are where the seasonal pattern on lecture slide 13 starts.</figcaption>
+          <figcaption class="i18n" data-ko='triage_by_category.png: 모델이 분류한 민원 수. 이런 집계가 계절별 민원 패턴 분석의 출발점입니다.'>triage_by_category.png: complaints per category as triaged by the model. Counts like these are the starting point for spotting seasonal complaint patterns.</figcaption>
         </figure>
         <div class="callout tip">
           <div class="ci">i</div>
           <div><span class="ct i18n" data-ko='분류는 잘하는데, 우선순위는?'>Good at category, weak at priority</span>
-            <p class="i18n" data-ko='저희 테스트에서 분류는 24건 모두 맞았지만 우선순위는 절반도 못 맞혔습니다. 모델은 대부분을 &quot;high&quot; 로 올려 버립니다. 강의 25번 슬라이드의 평가표와 같은 모습입니다: <strong>정답이 있는 테스트 세트로 점수를 매겨야</strong> 이런 약점이 보입니다. 숫자는 노트북과 모델 버전에 따라 조금 다를 수 있습니다.'>In our test the category was right for all 24 complaints, but less than half of the priorities were. The model pushes most of them up to "high". It's the same picture as the scorecard on lecture slide 25: <strong>you only see weaknesses like this when you score against a labelled test set</strong>. Your numbers may differ slightly by laptop and model version.</p>
+            <p class="i18n" data-ko='저희 테스트에서 분류는 24건 모두 맞았지만 우선순위는 절반도 못 맞혔습니다. 모델은 대부분을 &quot;high&quot; 로 올려 버립니다. <strong>정답이 있는 테스트 세트로 점수를 매겨야</strong> 이런 약점이 보입니다. 숫자는 노트북과 모델 버전에 따라 조금 다를 수 있습니다.'>In our test the category was right for all 24 complaints, but less than half of the priorities were. The model pushes most of them up to "high". <strong>You only see weaknesses like this when you score against a labelled test set</strong>. Your numbers may differ slightly by laptop and model version.</p>
           </div>
         </div>
         <div class="callout verify">
@@ -729,7 +729,7 @@ A: 매뉴얼에 없는 내용입니다.</code></pre>
         <p class="i18n" data-ko='<code class="ic">gemma3:4b</code> 는 사진도 읽습니다. 4주차 복도 사진을 보내고 안전·관리 문제를 JSON 목록으로 받은 뒤, 사람이 검토하고 서명할 <strong>마크다운 보고서</strong> 로 만듭니다.'><code class="ic">gemma3:4b</code> can read photos too. We send it the Week 4 corridor photo, get the safety and housekeeping findings back as a JSON list, and turn them into a <strong>markdown report</strong> that a person reviews and signs.</p>
         <figure>
           <img src="assets/week04_site_photo.jpg" alt="The corridor from Week 4: shelves and a waste bag on the left, wooden wall panels on the right, a stair door with an exit sign at the far end" loading="lazy" style="max-height:420px;object-fit:contain">
-          <figcaption class="i18n" data-ko='data/site_photo_corridor.jpg: 강의 17번 슬라이드에서 사람이 찾은 항목은 선반 적치물, 바닥의 폐기물 봉투, 유도등, 소화기였습니다.'>data/site_photo_corridor.jpg. On lecture slide 17, a person found: shelving narrowing the corridor, a waste bag on the floor, the exit sign and the fire extinguisher.</figcaption>
+          <figcaption class="i18n" data-ko='data/site_photo_corridor.jpg: 사람이 이 사진에서 찾은 항목은 선반 적치물, 바닥의 폐기물 봉투, 유도등, 소화기였습니다.'>data/site_photo_corridor.jpg. A person checking this photo found: shelving narrowing the corridor, a waste bag on the floor, the exit sign and the fire extinguisher.</figcaption>
         </figure>
         <div class="code">
           <div class="code-head"><span class="code-tag">inspect_photo.py</span><button class="copy">copy</button></div>
