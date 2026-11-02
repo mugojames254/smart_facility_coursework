@@ -87,6 +87,7 @@
     color:var(--faint);font-weight:600;text-align:center}
   .wk-num b{display:block;font-family:"Bricolage Grotesque",sans-serif;font-size:2.4rem;line-height:1.05;
     letter-spacing:-.02em;color:var(--accent-ink);font-weight:800}
+  .wk-num b.lbl{font-size:1.25rem;letter-spacing:0;margin-top:12px}
   .card h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:1.45rem;
     letter-spacing:-.01em;margin:0 0 6px}
   .card h2 a{color:inherit;text-decoration:none}
@@ -119,6 +120,7 @@
     .card{grid-template-columns:1fr;gap:6px;padding:18px}
     .wk-num{text-align:left}
     .wk-num b{display:inline;font-size:1.6rem;margin-left:6px}
+    .wk-num b.lbl{margin:0}
     .progress{margin-left:0;width:100%}
   }
 </style>
@@ -182,7 +184,13 @@
       text:{ en:"Run a small LLM locally with Ollama, triage complaints into JSON, answer from an O&M manual with RAG, draft an inspection report from a photo, and build an agent that asks for approval.",
              ko:"Ollama 로 작은 LLM 을 내 노트북에서 실행하고, 민원을 JSON 으로 분류하고, RAG 로 매뉴얼에서 답을 찾고, 사진으로 점검 보고서 초안을 쓰고, 승인을 받는 에이전트를 만듭니다." },
       tags:["Ollama","gemma3","structured output","RAG","vision","agents"],
-      files:[ { href:"week09_data.zip", en:"Data", ko:"데이터" } ] }
+      files:[ { href:"week09_data.zip", en:"Data", ko:"데이터" } ] },
+    { week:"F", label:{ en:"Final", ko:"기말" }, page:"final_practical.html", key:"final.done", steps:4,
+      title:{ en:"Final practical: complaint triage and a robot inspection route", ko:"기말 실습: 민원 분류와 로봇 점검 경로" },
+      text:{ en:"Write your own modules: triage 50 new complaints with a local LLM, and map a new robot route on the lidar scan. Submit one zip by email by Mon 23 Nov 2026, 23:59.",
+             ko:"나만의 모듈을 작성합니다: 로컬 LLM 으로 새 민원 50건을 분류하고, 라이다 스캔 위에 새 로봇 경로를 그립니다. 2026년 11월 23일 (월) 23:59 까지 zip 파일 하나를 이메일로 제출합니다." },
+      tags:["assignment","Ollama","pandas","matplotlib","open3d","due 23 Nov"],
+      files:[ { href:"final_data.zip", en:"Data", ko:"데이터" } ] }
   ];
 
   var KEY_THEME="setup.theme", KEY_LANG="setup.lang", lang="en";
@@ -205,7 +213,7 @@
         return '<a class="btn" href="'+esc(f.href)+'" download><span aria-hidden="true">⬇</span>'+esc(f[lang])+'</a>';
       }).join("");
       return '<li class="card'+(n===c.steps?' complete':'')+'">'+
-        '<div class="wk-num">'+esc(STR.week[lang])+'<b>'+esc(c.week)+'</b></div>'+
+        '<div class="wk-num">'+(c.label ? '<b class="lbl">'+esc(c.label[lang])+'</b>' : esc(STR.week[lang])+'<b>'+esc(c.week)+'</b>')+'</div>'+
         '<div><h2><a href="'+esc(c.page)+'">'+esc(c.title[lang])+'</a></h2>'+
         '<p>'+esc(c.text[lang])+'</p>'+
         '<ul class="chips">'+c.tags.map(function(t){ return '<li>'+esc(t)+'</li>'; }).join("")+'</ul>'+

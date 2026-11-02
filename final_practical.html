@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Final Practical</title>
+<meta name="description" content="Final practical for Smart Facility Management: triage 50 Korean facility complaints with a local LLM, and draw a robot inspection route on the lidar map. Due 23 November 2026.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+  :root{
+    --bg:#e9ecec; --surface:#ffffff; --surface-2:#f3f6f6;
+    --ink:#152220; --muted:#576560; --faint:#8a9793;
+    --border:#d6dedc; --border-strong:#c2cccb;
+    --accent:#0e7b7b; --accent-ink:#0a5c5c; --accent-wash:#e3f0ef;
+    --warn:#a85808; --warn-bg:#fbf1e4; --warn-border:#efd6b3;
+    --ok:#137a48; --ok-bg:#e8f4ec; --ok-border:#bfe1cb;
+    --code-bg:#0e1a19; --code-surface:#152625; --code-ink:#d6e4e1;
+    --code-muted:#7f938f; --code-prompt:#3fb7ac; --code-border:#233634;
+    --shadow:0 1px 2px rgba(20,40,38,.05),0 8px 24px -14px rgba(20,40,38,.22);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1211; --surface:#111a19; --surface-2:#16211f;
+      --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
+      --border:#22302e; --border-strong:#2d3d3a;
+      --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
+      --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
+      --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
+      --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
+      --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1211; --surface:#111a19; --surface-2:#16211f;
+    --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
+    --border:#22302e; --border-strong:#2d3d3a;
+    --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
+    --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
+    --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
+    --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
+    --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+    font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  html[lang="ko"] body{
+    font-family:"IBM Plex Sans","Noto Sans KR",ui-sans-serif,system-ui,sans-serif;
+  }
+  .wrap{max-width:940px;margin:0 auto;padding:0 24px}
+
+  /* progress bar */
+  .progress-bar{position:sticky;top:0;z-index:40;height:4px;background:transparent}
+  .progress-fill{height:100%;width:0;background:var(--accent);transition:width .35s ease}
+
+  /* header */
+  header{padding:56px 0 30px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent-ink);font-weight:600;margin:0 0 14px}
+  h1{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;
+    font-size:clamp(2.3rem,6vw,3.6rem);line-height:1.02;letter-spacing:-.02em;
+    margin:0 0 16px;text-wrap:balance}
+  .lede{font-size:1.12rem;color:var(--muted);max-width:60ch;margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:22px;
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--faint)}
+  .meta b{color:var(--muted);font-weight:600}
+  .slides-btn{display:inline-flex;align-items:center;gap:8px;margin-top:22px;
+    padding:10px 18px;background:var(--accent);color:#fff;font-weight:600;font-size:14px;
+    text-decoration:none;border-radius:8px;box-shadow:var(--shadow);
+    transition:background .2s,transform .1s}
+  .slides-btn:hover{background:var(--accent-ink)}
+  .slides-btn:active{transform:translateY(1px)}
+
+  /* sticky OS control */
+  .controls{position:sticky;top:4px;z-index:30;background:var(--bg);
+    padding:14px 0 12px;margin-bottom:8px;
+    border-bottom:1px solid var(--border)}
+  .controls-inner{display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between}
+  .os-label{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint);font-weight:600}
+  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:11px;padding:3px;gap:2px;flex-wrap:wrap}
+  .seg button{font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;font-weight:500;
+    color:var(--muted);background:transparent;border:0;padding:7px 13px;border-radius:8px;
+    cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+  .seg button:hover{color:var(--ink)}
+  .seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent-ink);
+    box-shadow:var(--shadow);font-weight:600}
+  .util{display:flex;align-items:center;gap:8px}
+  .theme-toggle,.lang-toggle{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:9px;
+    padding:8px 12px;cursor:pointer;transition:color .15s,border-color .15s}
+  .theme-toggle:hover,.lang-toggle:hover{color:var(--ink);border-color:var(--border-strong)}
+  .lang-toggle{font-weight:600;min-width:64px}
+  html[lang="ko"] .lang-toggle,html[lang="ko"] .os-label,html[lang="ko"] .eyebrow,
+  html[lang="ko"] .meta,html[lang="ko"] .code-tag{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
+
+  /* steps */
+  main{padding:20px 0 40px;counter-reset:step}
+  .step{display:grid;grid-template-columns:52px 1fr;gap:22px;
+    padding:30px 0;border-top:1px solid var(--border)}
+  .step:first-of-type{border-top:0}
+  .stepnum{position:relative}
+  .stepnum .dot{position:sticky;top:82px;width:52px;height:52px;border-radius:14px;
+    background:var(--surface);border:1.5px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;
+    font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:1.35rem;
+    color:var(--accent-ink);box-shadow:var(--shadow);transition:background .2s,border-color .2s,color .2s}
+  .step.done .stepnum .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+  .step.done .stepnum .dot::after{content:"✓";font-size:1.5rem}
+  .step.done .stepnum .dot span{display:none}
+  .step-body h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;
+    font-size:1.5rem;letter-spacing:-.01em;margin:2px 0 6px;text-wrap:balance}
+  .step-body p{margin:0 0 14px;color:var(--muted)}
+  .step-body p strong{color:var(--ink);font-weight:600}
+  .inline-link{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-wash);
+    font-weight:500}
+  .inline-link:hover{border-bottom-color:var(--accent)}
+  code.ic{font-family:"IBM Plex Mono",monospace;font-size:.86em;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:5px;
+    padding:1px 5px;color:var(--accent-ink)}
+
+  /* code block */
+  .code{background:var(--code-bg);border:1px solid var(--code-border);border-radius:12px;
+    overflow:hidden;margin:0 0 16px;box-shadow:var(--shadow)}
+  .code-head{display:flex;align-items:center;justify-content:space-between;
+    padding:8px 12px 8px 14px;background:var(--code-surface);border-bottom:1px solid var(--code-border)}
+  .code-tag{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--code-muted);font-weight:500}
+  .copy{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--code-muted);
+    background:transparent;border:1px solid var(--code-border);border-radius:7px;
+    padding:5px 10px;cursor:pointer;transition:color .15s,border-color .15s}
+  .copy:hover{color:var(--code-ink);border-color:var(--code-muted)}
+  .copy.copied{color:var(--code-prompt);border-color:var(--code-prompt)}
+  pre{margin:0;padding:14px 16px;overflow-x:auto}
+  pre code{font-family:"IBM Plex Mono",monospace;font-size:13.5px;line-height:1.7;
+    color:var(--code-ink);white-space:pre;display:block}
+  pre .cmt{color:var(--code-muted)}
+  pre .pr{color:var(--code-prompt);user-select:none}
+
+  /* os-specific visibility */
+  [data-os]{display:none}
+  [data-os].os-on{display:block}
+
+  /* callouts */
+  .callout{border-radius:12px;padding:16px 18px;margin:0 0 16px;border:1px solid;
+    display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start}
+  .callout .ci{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;
+    width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center}
+  .callout p{margin:0 0 8px}
+  .callout p:last-child{margin:0}
+  .callout .ct{font-weight:600;display:block;margin-bottom:3px}
+  .verify{background:var(--ok-bg);border-color:var(--ok-border)}
+  .verify .ci{background:var(--ok);color:#fff}
+  .verify .ct{color:var(--ok)}
+  .verify code.ic{background:transparent;border-color:var(--ok-border);color:var(--ok)}
+  .warn{background:var(--warn-bg);border-color:var(--warn-border)}
+  .warn .ci{background:var(--warn);color:#fff}
+  .warn .ct{color:var(--warn)}
+  .warn code.ic{background:transparent;border-color:var(--warn-border);color:var(--warn)}
+  .tip{background:var(--accent-wash);border-color:var(--border)}
+  .tip .ci{background:var(--accent);color:#fff}
+  .tip .ct{color:var(--accent-ink)}
+
+  /* lists (exercise) */
+  .step-body ol,.step-body ul{margin:0 0 16px;padding-left:22px}
+  .step-body li{margin:4px 0}
+  .step-body li ul{margin:4px 0 0}
+
+  /* done toggle */
+  .done-row{margin-top:6px}
+  .done-btn{display:inline-flex;align-items:center;gap:10px;
+    font-family:"IBM Plex Sans",sans-serif;font-size:14px;font-weight:500;color:var(--muted);
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:9px 15px;cursor:pointer;transition:color .15s,border-color .15s,background .15s}
+  .done-btn:hover{border-color:var(--border-strong);color:var(--ink)}
+  .done-btn .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;font-size:12px;transition:background .15s,border-color .15s}
+  .step.done .done-btn{color:var(--ok);border-color:var(--ok-border);background:var(--ok-bg)}
+  .step.done .done-btn .box{background:var(--ok);border-color:var(--ok);color:#fff}
+
+  /* cheat sheet */
+  .cheat{margin:12px 0 60px;border:1px solid var(--border);border-radius:16px;
+    background:var(--surface);padding:26px 26px 10px;box-shadow:var(--shadow)}
+  .cheat h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:1.4rem;
+    margin:0 0 4px;letter-spacing:-.01em}
+  .cheat p{color:var(--muted);margin:0 0 18px;font-size:.95rem}
+
+  footer{padding:20px 0 60px;border-top:1px solid var(--border);
+    color:var(--faint);font-family:"IBM Plex Mono",monospace;font-size:12px}
+  footer a{color:var(--accent-ink);text-decoration:none}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+  @media (max-width:620px){
+    .step{grid-template-columns:40px 1fr;gap:14px}
+    .stepnum .dot{width:40px;height:40px;font-size:1.05rem}
+    .stepnum .dot::after{font-size:1.15rem}
+    header{padding:40px 0 22px}
+  }
+
+  /* week 4 + 5 additions */
+  code.ic{overflow-wrap:anywhere}
+  .step-body{min-width:0}
+  .btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .btn-row .slides-btn{margin-top:0}
+  .ghost-btn{background:var(--surface);color:var(--accent-ink);border:1px solid var(--border)}
+  .ghost-btn:hover{background:var(--surface-2)}
+  .tree{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:4px 0;margin:0 0 16px;overflow-x:auto}
+  .tree table{width:100%;border-collapse:collapse;font-size:.92rem}
+  .tree td{padding:8px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+  .tree tr:first-child td{border-top:0}
+  .tree td:first-child{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--accent-ink);
+    white-space:nowrap;font-weight:500}
+  figure{margin:0 0 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    overflow:hidden;box-shadow:var(--shadow)}
+  figure img{display:block;width:100%;height:auto;background:#fff}
+  figcaption{padding:10px 14px;font-size:.88rem;color:var(--faint);border-top:1px solid var(--border)}
+  .fig-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 16px}
+  .fig-pair figure{margin:0}
+  .fig-pair img{aspect-ratio:4/3;object-fit:cover}
+  @media (max-width:620px){.fig-pair{grid-template-columns:1fr}}
+  /* course navigation */
+  .course-nav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 18px;margin:0 0 26px;
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px}
+  .course-nav a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid transparent}
+  .course-nav a:hover{border-bottom-color:var(--accent)}
+  .course-nav .pn{display:flex;flex-wrap:wrap;gap:8px 18px}
+  html[lang="ko"] .course-nav{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
+</style>
+  <style>
+  .controls-inner .os-label{white-space:nowrap}
+  .fig-pair figcaption a,.step-body li a{color:var(--accent-ink)}
+  .step-body ol ul{margin:4px 0 0}
+  .fig-pair img.fit{object-fit:contain;background:#fff}
+  @media (max-width:620px){.tree td:first-child{white-space:normal;overflow-wrap:anywhere;width:42%}}
+  </style>
+</head>
+<body>
+<div class="progress-bar"><div class="progress-fill" id="pfill"></div></div>
+
+<div class="wrap">
+  <header>
+    <nav class="course-nav" aria-label="Course navigation">
+      <a href="index.html" class="i18n" data-ko='← 강의 홈 (전체 목차)'>← Course home (all classes)</a>
+      <span class="pn">
+      <a href="week04.html#s6" class="i18n" data-ko='4주차: 로봇 경로'>Week 4: robot route</a>
+      <a href="week09.html#s2" class="i18n" data-ko='9주차: 민원 분류'>Week 9: complaint triage</a>
+      </span>
+    </nav>
+    <p class="eyebrow i18n" data-ko='스마트 시설 관리 - 기말 실습 과제'>Smart Facility Management - Final Practical Assignment . (For any queries please feel free to reachout: mugojames254@skku.edu)</p>
+    <h1 class="i18n" data-ko='기말 실습: 민원 분류와 로봇 점검 경로'>Final practical: complaint triage and a robot inspection route</h1>
+    <p class="lede i18n" data-ko='수업에서 직접 해 본 두 가지를 이번에는 <strong>스스로</strong> 만듭니다. 연습 1은 9주차의 LLM 민원 분류, 연습 2는 4주차의 로봇 경로 지도입니다. 수업 코드를 <strong>참고하여 나만의 Python 모듈</strong>을 작성하세요. AI 도구 사용은 허용됩니다.'>Two tasks you have already done in class, this time on your own. Exercise 1 is the LLM complaint triage from Week 9; Exercise 2 is the robot route map from Week 4. You <strong>write your own Python modules</strong>, using the class code as a reference. AI tools are allowed.</p>
+    <div class="meta">
+      <span class="i18n" data-ko='<b>마감</b> 2026년 11월 23일 (월) 23:59'><b>Deadline</b> Mon 23 Nov 2026, 23:59</span>
+      <span class="i18n" data-ko='<b>제출</b> zip 파일 하나를 이메일로: mugojames254@skku.edu'><b>Submit</b> one zip by email: mugojames254@skku.edu</span>
+      <span class="i18n" data-ko='<b>연습 1</b> LLM 민원 분류 (9주차)'><b>Exercise 1</b> LLM complaint triage (Week 9)</span>
+      <span class="i18n" data-ko='<b>연습 2</b> 로봇 점검 경로 (4주차)'><b>Exercise 2</b> robot inspection route (Week 4)</span>
+    </div>
+    <div class="btn-row">
+      <a class="slides-btn" href="final_data.zip" download>
+        <span aria-hidden="true">⬇</span>
+        <span class="i18n" data-ko='기말 실습 데이터 내려받기 (.zip, 6.2 MB)'>Download final data (.zip, 6.2 MB)</span>
+      </a>
+      <a class="slides-btn ghost-btn" href="week09.html">
+        <span aria-hidden="true">←</span>
+        <span class="i18n" data-ko='9주차: LLM'>Week 9: LLMs</span>
+      </a>
+      <a class="slides-btn ghost-btn" href="week04.html">
+        <span aria-hidden="true">←</span>
+        <span class="i18n" data-ko='4주차: 포인트 클라우드'>Week 4: point clouds</span>
+      </a>
+    </div>
+  </header>
+</div>
+
+<div class="controls">
+  <div class="wrap controls-inner">
+    <span class="os-label i18n" data-ko='기말 실습 · 마감 11월 23일'>Final practical · due 23 Nov</span>
+    <div class="util">
+      <button class="lang-toggle" id="langBtn" aria-label="Switch language">한국어</button>
+      <button class="theme-toggle" id="themeBtn" aria-label="Toggle color theme">◐ theme</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <main>
+
+    <!-- STEP 0 : GET READY -->
+    <section class="step" id="s0">
+      <div class="stepnum"><div class="dot"><span>0</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='준비: 새 프로젝트와 데이터'>Get ready: a new project and the data</h2>
+        <p class="i18n" data-ko='기말 실습을 위한 새 uv 프로젝트를 만들고, 두 연습에 필요한 라이브러리를 한 번에 추가합니다. Ollama 와 <code class="ic">gemma3:4b</code> 모델은 9주차에 이미 설치했습니다.'>Make a new uv project for the final and add the libraries for both exercises in one go. Ollama and the <code class="ic">gemma3:4b</code> model are already installed from Week 9.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='터미널'>terminal</span><button class="copy">copy</button></div>
+<pre><code>uv init --python 3.12 --no-package facility-final
+cd facility-final
+uv add ollama pydantic pandas matplotlib numpy open3d
+ollama list</code></pre>
+        </div>
+        <p class="i18n" data-ko='<code class="ic">ollama list</code> 에 <code class="ic">gemma3:4b</code> 가 보이면 됩니다. 없다면 <code class="ic">ollama pull gemma3:4b</code> 를 실행하세요. 그다음 위의 <strong>기말 실습 데이터 내려받기</strong> 버튼을 누르고, zip 을 <code class="ic">facility-final</code> 폴더 안에 풀어 아래처럼 <code class="ic">data</code> 폴더가 생기게 하세요:'>You should see <code class="ic">gemma3:4b</code> in the <code class="ic">ollama list</code> output; if not, run <code class="ic">ollama pull gemma3:4b</code>. Then click <strong>Download final data</strong> at the top and unzip it inside <code class="ic">facility-final</code>, so you get a <code class="ic">data</code> folder like this:</p>
+        <div class="tree">
+          <table>
+            <tr><td>data/complaints_final.csv</td><td class="i18n" data-ko='<strong>가상</strong> 민원 50건. <code class="ic">category</code> 와 <code class="ic">priority</code> 열이 <strong>비어 있습니다</strong>. 연습 1에서 채웁니다.'>50 <strong>synthetic</strong> complaints. The <code class="ic">category</code> and <code class="ic">priority</code> columns are <strong>empty</strong>; you fill them in Exercise 1.</td></tr>
+            <tr><td>data/route_final.csv</td><td class="i18n" data-ko='4주차 건물의 실제 라이다 지도 위에서 만든 <strong>모의</strong> 점검 주행 (약 4분). 4주차 <code class="ic">robot_trajectory.csv</code> 와 같은 열입니다. 연습 2에서 사용합니다.'>A <strong>simulated</strong> inspection run (about 4 min), made on the real lidar map of the Week 4 building. Same columns as the Week 4 <code class="ic">robot_trajectory.csv</code>. Used in Exercise 2.</td></tr>
+            <tr><td>data/lidar_map.ply</td><td class="i18n" data-ko='4주차와 같은 건물 라이다 지도 (52만 점). 연습 2에서 사용합니다.'>The same lidar map of the building as in Week 4 (520k points). Used in Exercise 2.</td></tr>
+            <tr><td>data/README.md</td><td class="i18n" data-ko='모든 열의 설명.'>What every column means.</td></tr>
+          </table>
+        </div>
+        <div class="callout tip">
+          <div class="ci">AI</div>
+          <div><span class="ct i18n" data-ko='AI 도구 사용 허용'>AI tools are allowed</span>
+            <p class="i18n" data-ko='ChatGPT, Claude, Gemini, Copilot 같은 AI 도구로 코드를 작성하거나 오류를 고쳐도 됩니다. 단, 다음을 지키세요:'>You may use AI tools such as ChatGPT, Claude, Gemini or Copilot to write code and fix errors. One condition:</p>
+            <ul>
+              <li class="i18n" data-ko='민원 분류는 <strong>내 모듈이 내 노트북의 Ollama 모델로</strong> 해야 합니다. 민원 내용을 온라인 챗봇에 붙여 넣어 답을 받거나, 손으로 채우면 안 됩니다.'>The complaint triage must be done <strong>by your module with the Ollama model on your laptop</strong>. Do not paste the complaints into an online chatbot to get the answers, and do not fill them in by hand.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s0"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 1 : EXERCISE 1 -->
+    <section class="step" id="s1">
+      <div class="stepnum"><div class="dot"><span>1</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='연습 1: LLM 으로 민원 50건 분류하기'>Exercise 1: triage 50 complaints with an LLM</h2>
+        <p class="i18n" data-ko='시설팀에는 매일 카카오톡, 웹, 전화로 민원이 들어옵니다. 누군가 하나씩 읽고 <strong>분류</strong>(어느 공종이 가야 하나?)와 <strong>우선순위</strong>(얼마나 급한가?)를 정해야 합니다. 이번에는 그 일을 내 노트북의 LLM 이 하도록 만드세요.'>Every day a facility team receives complaints by KakaoTalk, web form and phone. Someone has to read each one and decide the <strong>category</strong> (which trade should go?) and the <strong>priority</strong> (how urgent is it?). Make the LLM on your laptop do that job.</p>
+        <div class="fig-pair">
+          <figure>
+            <img src="assets/final_ex1_ceiling_leak.jpg" alt="Water-stained ceiling tile above a tiled wall" loading="lazy">
+            <figcaption class="i18n" data-ko='천장 누수: 전형적인 민원입니다. 분류는 plumbing, 우선순위는? 사진: Atomicdragon136, <a href="https://commons.wikimedia.org/wiki/File:Ceiling_water_damage.jpg" target="_blank" rel="noopener">Wikimedia Commons</a>, CC BY 3.0'>A ceiling leak: a typical complaint. Category plumbing, but which priority? Photo: Atomicdragon136, <a href="https://commons.wikimedia.org/wiki/File:Ceiling_water_damage.jpg" target="_blank" rel="noopener">Wikimedia Commons</a>, CC BY 3.0</figcaption>
+          </figure>
+          <figure>
+            <img class="fit" src="assets/week09_triage_by_category.png" alt="Bar chart of complaints per category from the Week 9 class data" loading="lazy">
+            <figcaption class="i18n" data-ko='결과 예시: 9주차 수업 데이터로 만든 분류별 민원 수 막대그래프. 여러분의 그래프는 기말 데이터 50건으로 만듭니다.'>Example output: complaints per category from the Week 9 class data. Your chart uses the 50 final complaints.</figcaption>
+          </figure>
+        </div>
+        <p class="i18n" data-ko='<strong>새 Python 모듈</strong> <code class="ic">triage_final.py</code> 를 작성하세요. 이 모듈은:'>Write a <strong>new Python module</strong>, <code class="ic">triage_final.py</code>. It must:</p>
+        <ol>
+          <li class="i18n" data-ko='<code class="ic">data/complaints_final.csv</code> 를 읽습니다.'>Read <code class="ic">data/complaints_final.csv</code>.</li>
+          <li class="i18n" data-ko='각 민원의 <code class="ic">text</code> 만 Ollama 의 LLM 에 보내고, 분류와 우선순위를 받습니다. 보내기 <strong>전에</strong> 전화번호를 가립니다 (F49 에 가짜 번호가 하나 있습니다).'>Send only the <code class="ic">text</code> of each complaint to an LLM in Ollama and get back a category and a priority. Hide phone numbers <strong>before</strong> sending (F49 contains a fake one).</li>
+          <li class="i18n" data-ko='답은 반드시 아래 목록의 값 중 하나여야 합니다:<ul><li><code class="ic">category</code>: plumbing, hvac, electrical, cleaning, safety, elevator, other</li><li><code class="ic">priority</code>: urgent, high, normal, low</li></ul>'>Use only these values:<ul><li><code class="ic">category</code>: plumbing, hvac, electrical, cleaning, safety, elevator, other</li><li><code class="ic">priority</code>: urgent, high, normal, low</li></ul></li>
+          <li class="i18n" data-ko='50행과 원래 열을 그대로 두고, 빈 두 열만 채워서 <code class="ic">complaints_final_filled.csv</code> 로 저장합니다.'>Save <code class="ic">complaints_final_filled.csv</code>: the same 50 rows and columns, with the two empty columns filled in.</li>
+          <li class="i18n" data-ko='분류별 민원 수를 막대그래프로 그려 <code class="ic">triage_by_category.png</code> 로 저장합니다.'>Draw a bar chart of complaints per category and save it as <code class="ic">triage_by_category.png</code>.</li>
+        </ol>
+        <p class="i18n" data-ko='참고: <a class="inline-link" href="week09.html#s2">9주차 2단계</a> 의 <code class="ic">triage.py</code>. 프롬프트, JSON 형식 (<code class="ic">pydantic</code>), 전화번호 가리기, 막대그래프가 모두 들어 있습니다. 그대로 복사하지 말고, 무엇이 왜 필요한지 이해한 뒤 내 모듈을 만드세요.'>Reference: <code class="ic">triage.py</code> in <a class="inline-link" href="week09.html#s2">Week 9, Step 2</a>. It has everything you need: the prompt, the JSON format with <code class="ic">pydantic</code>, phone masking and the bar chart. Don't copy it as is; understand what each part does and why, then build your own module.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행'>run</span><button class="copy">copy</button></div>
+<pre><code>uv run triage_final.py</code></pre>
+        </div>
+        <div class="callout warn">
+          <div class="ci">!</div>
+          <div><span class="ct i18n" data-ko='자주 나오는 오류'>A common error</span>
+            <p class="i18n" data-ko='<code class="ic">TypeError: Invalid value &#39;plumbing&#39; for dtype &#39;float64&#39;</code> 가 나오면, pandas 가 빈 열을 숫자 열로 읽었기 때문입니다. 파일을 이렇게 읽으세요: <code class="ic">pd.read_csv(&quot;data/complaints_final.csv&quot;, dtype=str)</code>'>If you see <code class="ic">TypeError: Invalid value 'plumbing' for dtype 'float64'</code>, pandas read the empty columns as number columns. Read the file like this: <code class="ic">pd.read_csv("data/complaints_final.csv", dtype=str)</code></p>
+          </div>
+        </div>
+        <p class="i18n" data-ko='<strong>제출할 파일 (연습 1):</strong>'><strong>Files to submit for Exercise 1:</strong></p>
+        <div class="tree">
+          <table>
+            <tr><td>triage_final.py</td><td class="i18n" data-ko='내가 작성한 모듈'>your module</td></tr>
+            <tr><td>complaints_final_filled.csv</td><td class="i18n" data-ko='분류와 우선순위가 채워진 50건'>the 50 complaints with category and priority filled in</td></tr>
+            <tr><td>triage_by_category.png</td><td class="i18n" data-ko='분류별 민원 수 막대그래프'>the bar chart of complaints per category</td></tr>
+          </table>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s1"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 2 : EXERCISE 2 -->
+    <section class="step" id="s2">
+      <div class="stepnum"><div class="dot"><span>2</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='연습 2: 로봇 점검 경로를 지도에 그리기'>Exercise 2: draw the robot's inspection route on the map</h2>
+        <p class="i18n" data-ko='점검 로봇은 주행하는 동안 약 0.1초마다 자기 위치를 기록합니다. 시설 관리자가 가장 먼저 묻는 것은: <strong>로봇이 어디를 다녀왔고, 얼마나 멀리, 얼마나 오래 달렸는가?</strong> 4주차와 같은 건물에서 한 새 점검 주행을 지도 위에 그려 답하세요.'>An inspection robot records its own position about every 0.1 s while it drives. A facility manager's first question is: <strong>where did the robot go, how far, and for how long?</strong> Answer it for a new inspection run in the same building as Week 4, by drawing the route on the map.</p>
+        <div class="fig-pair">
+          <figure>
+            <img src="assets/final_ex2_inspection_robot.jpg" alt="A blue four-legged inspection robot with a lidar scanner mounted on its back" loading="lazy">
+            <figcaption class="i18n" data-ko='우리 UGV 처럼 등에 라이다를 단 점검 로봇 (Boston Dynamics Spot, 스웨덴 광산 기업 LKAB, 2023). 사진: Tore Danielsson (WMSE), <a href="https://commons.wikimedia.org/wiki/File:Boston_Dynamics_LKAB_Almedalen_29_juni_2023.jpg" target="_blank" rel="noopener">Wikimedia Commons</a>, CC BY-SA 4.0'>An inspection robot with a lidar scanner on its back, like our UGV (Boston Dynamics Spot of the Swedish mining company LKAB, 2023). Photo: Tore Danielsson (WMSE), <a href="https://commons.wikimedia.org/wiki/File:Boston_Dynamics_LKAB_Almedalen_29_juni_2023.jpg" target="_blank" rel="noopener">Wikimedia Commons</a>, CC BY-SA 4.0</figcaption>
+          </figure>
+          <figure>
+            <img class="fit" src="assets/final_example_route_map.jpg" alt="Top view of the lidar map in grey with the Week 4 robot path, start and end marked" loading="lazy">
+            <figcaption class="i18n" data-ko='결과 예시: <strong>4주차 수업</strong> 주행을 그린 지도. 여러분은 기말 데이터의 새 주행을 그립니다.'>Example output: the map for the <strong>Week 4 class</strong> run. You draw the new run from the final data.</figcaption>
+          </figure>
+        </div>
+        <p class="i18n" data-ko='<strong>새 Python 모듈</strong> <code class="ic">route_final.py</code> 를 작성하세요. 이 모듈은:'>Write a <strong>new Python module</strong>, <code class="ic">route_final.py</code>. It must:</p>
+        <ol>
+          <li class="i18n" data-ko='<code class="ic">data/route_final.csv</code> 와 <code class="ic">data/lidar_map.ply</code> 를 읽습니다.'>Read <code class="ic">data/route_final.csv</code> and <code class="ic">data/lidar_map.ply</code>.</li>
+          <li class="i18n" data-ko='기록된 위치 수, 주행 시간 (분), 주행 거리 (m), 평균 속도 (m/s) 를 계산해 출력합니다.'>Calculate and print the number of recorded positions, the duration (min), the distance driven (m) and the average speed (m/s).</li>
+          <li class="i18n" data-ko='위에서 본 지도를 그립니다: 라이다 지도는 회색 점, 그 위에 로봇 경로 선, <strong>시작점은 초록</strong>, <strong>끝점은 빨강</strong>으로 표시합니다. 축 비율은 같게 (<code class="ic">axis(&quot;equal&quot;)</code>), 축 이름은 미터 단위, 범례를 넣고, 제목에 거리와 시간을 넣으세요.'>Draw the top view: the lidar map as grey points, the robot's path as a line on top, the <strong>start in green</strong> and the <strong>end in red</strong>. Use equal axes (<code class="ic">axis("equal")</code>), axis labels in metres and a legend, and put the distance and duration in the title.</li>
+          <li class="i18n" data-ko='그림을 <code class="ic">route_map.png</code> 로 저장합니다.'>Save the figure as <code class="ic">route_map.png</code>.</li>
+        </ol>
+        <p class="i18n" data-ko='참고: <a class="inline-link" href="week04.html#s6">4주차 6단계 &quot;첫 분석: 로봇은 어디를 다녀왔을까?&quot;</a> 의 <code class="ic">first_look.py</code>. 거리 계산, 포인트 클라우드 읽기, 위에서 본 지도가 들어 있습니다. 끝점 표시는 수업 코드에 없으니 직접 추가하세요.'>Reference: <code class="ic">first_look.py</code> in <a class="inline-link" href="week04.html#s6">Week 4, Step 6, "First look: where did the robot go?"</a>. It shows how to calculate the distance, read the point cloud and draw the top view. The end point marker is not in the class code; add it yourself.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행'>run</span><button class="copy">copy</button></div>
+<pre><code>uv run route_final.py</code></pre>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='확인'>Check</span>
+            <p class="i18n" data-ko='경로는 4주차와 같은 복도 안에 있어야 하고, 4분 남짓의 주행입니다. 경로가 지도 밖에 있거나 숫자가 이상하다면 열 이름 (<code class="ic">x_m</code>, <code class="ic">y_m</code>, <code class="ic">t_s</code>) 과 단위를 다시 확인하세요.'>The route should stay inside the same corridors as Week 4, and the run lasts about 4 minutes. If the route lands outside the map or the numbers look odd, check the column names (<code class="ic">x_m</code>, <code class="ic">y_m</code>, <code class="ic">t_s</code>) and units.</p>
+          </div>
+        </div>
+        <p class="i18n" data-ko='<strong>제출할 파일 (연습 2):</strong>'><strong>Files to submit for Exercise 2:</strong></p>
+        <div class="tree">
+          <table>
+            <tr><td>route_final.py</td><td class="i18n" data-ko='내가 작성한 모듈'>your module</td></tr>
+            <tr><td>route_map.png</td><td class="i18n" data-ko='경로, 시작점, 끝점이 표시된 지도'>the map with the route, start and end</td></tr>
+          </table>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s2"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 3 : SUBMIT -->
+    <section class="step" id="s3">
+      <div class="stepnum"><div class="dot"><span>3</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='제출: zip 파일 하나를 이메일로'>Submit: one zip file by email</h2>
+        <p class="i18n" data-ko='<code class="ic">final_학번</code> 이라는 폴더를 만들고 (예: <code class="ic">final_2026123456</code>), 다섯 파일을 아래와 똑같은 이름과 위치로 넣으세요. <code class="ic">data</code> 폴더나 <code class="ic">.venv</code> 는 넣지 마세요.'>Make a folder named <code class="ic">final_</code> plus your student number (for example <code class="ic">final_2026123456</code>) and put the five files in it, with exactly these names and places. Do not include the <code class="ic">data</code> folder or <code class="ic">.venv</code>.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='제출 폴더 구조'>submission folder</span><button class="copy">copy</button></div>
+<pre><code>final_2026123456/
+├── exercise1/
+│   ├── triage_final.py
+│   ├── complaints_final_filled.csv
+│   └── triage_by_category.png
+└── exercise2/
+    ├── route_final.py
+    └── route_map.png</code></pre>
+        </div>
+        <ol>
+          <li class="i18n" data-ko='폴더를 zip 으로 압축합니다: <code class="ic">final_2026123456.zip</code> (Windows: 폴더 오른쪽 클릭 → 압축 / macOS: 오른쪽 클릭 → 압축).'>Zip the folder: <code class="ic">final_2026123456.zip</code> (Windows: right-click the folder → Compress to ZIP; macOS: right-click → Compress).</li>
+          <li class="i18n" data-ko='zip 파일을 첨부하여 <a href="mailto:mugojames254@skku.edu"><strong>mugojames254@skku.edu</strong></a> 로 <strong>2026년 11월 23일 (월) 23:59</strong> 까지 보냅니다.'>Email the zip as an attachment to <a href="mailto:mugojames254@skku.edu"><strong>mugojames254@skku.edu</strong></a> by <strong>Mon 23 Nov 2026, 23:59</strong>.</li>
+          <li class="i18n" data-ko='이메일 제목: <code class="ic">[Final] 학번 이름</code> (예: <code class="ic">[Final] 2026123456 Njoroge James Mugo</code>). 본문에도 이름과 학번을 적으세요.'>Email subject: <code class="ic">[Final] student-number name</code> (for example <code class="ic">[Final] 2026123456 Njoroge James Mugo</code>). Put your name and student number in the body too.</li>
+        </ol>
+        <div class="callout warn">
+          <div class="ci">!</div>
+          <div><span class="ct i18n" data-ko='보내기 전에 확인하세요'>Check before you send</span>
+            <ul>
+              <li class="i18n" data-ko='<code class="ic">complaints_final_filled.csv</code> 를 열어 50행 모두 <code class="ic">category</code> 와 <code class="ic">priority</code> 가 채워졌는지 확인하세요.'>Open <code class="ic">complaints_final_filled.csv</code> and check that all 50 rows have a <code class="ic">category</code> and a <code class="ic">priority</code>.</li>
+              <li class="i18n" data-ko='두 그림 파일이 열리고, 지도에 시작점과 끝점이 보이는지 확인하세요.'>Check that both images open and that the map shows the start and end points.</li>
+              <li class="i18n" data-ko='파일 이름이 위와 정확히 같은지 확인하세요. 채점은 이 이름으로 파일을 찾습니다.'>Check that the file names are exactly as above; grading looks for these names.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='채점 방법'>How it is graded</span>
+            <ul>
+              <li class="i18n" data-ko='<strong>연습 1:</strong> 분류와 우선순위를 시설팀의 정답과 비교한 정확도, 그래프, 그리고 모듈이 실제로 실행되는지.'><strong>Exercise 1:</strong> the accuracy of your category and priority against the facility team's answers, the chart, and whether your module runs.</li>
+              <li class="i18n" data-ko='<strong>연습 2:</strong> 지도 (경로, 시작점, 끝점, 축, 범례, 제목) 와 제목의 거리·시간이 맞는지, 그리고 모듈이 실제로 실행되는지.'><strong>Exercise 2:</strong> the map (route, start, end, axes, legend, title), whether the distance and duration in the title are right, and whether your module runs.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s3"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span class="i18n" data-ko='스마트 시설 관리 · 기말 실습 · 민원은 교육용 가상 데이터, 주행은 수업 UGV 의 실제 라이다 지도 위에서 만든 모의 주행'>Smart Facility Management · final practical · complaints are synthetic teaching data; the route is a simulated run on the course UGV's real lidar map</span> ·
+    <a href="week09.html" class="i18n" data-ko='9주차 LLM'>Week 9 LLMs</a> ·
+    <a href="week04.html" class="i18n" data-ko='4주차 포인트 클라우드'>Week 4 point clouds</a> ·
+    <a href="https://github.com/mugojames254/smart_facility_coursework" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var KEY_DONE="final.done", KEY_THEME="setup.theme", KEY_LANG="setup.lang";
+  var lang="en";
+  var STR={
+    copy:     { en:"copy",            ko:"복사" },
+    copied:   { en:"copied ✓",        ko:"복사됨 ✓" },
+    markDone: { en:" Mark step done", ko:" 완료 표시" },
+    stepDone: { en:" Step complete",  ko:" 완료됨" },
+    langBtn:  { en:"한국어",           ko:"EN" }
+  };
+
+  /* ---- i18n: capture English HTML, swap on demand ---- */
+  var i18nEls=document.querySelectorAll(".i18n");
+  i18nEls.forEach(function(el){ el._en=el.innerHTML; });
+  function applyLang(l){
+    lang=(l==="ko")?"ko":"en";
+    document.documentElement.setAttribute("lang",lang);
+    i18nEls.forEach(function(el){
+      var ko=el.getAttribute("data-ko");
+      el.innerHTML=(lang==="ko"&&ko!=null)?ko:el._en;
+    });
+    document.querySelectorAll(".copy").forEach(function(b){
+      if(!b.classList.contains("copied")) b.textContent=STR.copy[lang];
+    });
+    document.getElementById("langBtn").textContent=STR.langBtn[lang];
+    refresh();
+    try{ localStorage.setItem(KEY_LANG, lang); }catch(e){}
+  }
+
+  /* ---- copy buttons ---- */
+  document.addEventListener("click", function(e){
+    var btn=e.target.closest(".copy"); if(!btn) return;
+    var code=btn.closest(".code").querySelector("pre code");
+    var text=code.innerText;
+    function ok(){ btn.classList.add("copied"); var o=STR.copy[lang]; btn.textContent=STR.copied[lang];
+      setTimeout(function(){ btn.classList.remove("copied"); btn.textContent=o; },1400); }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(ok,ok); }
+    else { try{ var t=document.createElement("textarea"); t.value=text; document.body.appendChild(t);
+      t.select(); document.execCommand("copy"); document.body.removeChild(t); ok(); }catch(e){} }
+  });
+
+  /* ---- done tracking + progress ---- */
+  var steps=["s0","s1","s2","s3"], done={};
+  try{ done=JSON.parse(localStorage.getItem(KEY_DONE))||{}; }catch(e){ done={}; }
+  function saveDone(){ try{ localStorage.setItem(KEY_DONE, JSON.stringify(done)); }catch(e){} }
+  function refresh(){
+    var n=0;
+    steps.forEach(function(id){
+      var el=document.getElementById(id);
+      if(done[id]){ el.classList.add("done"); n++; } else { el.classList.remove("done"); }
+      var b=el.querySelector(".done-btn .box");
+      if(b) b.textContent = done[id] ? "✓" : "";
+      var lbl=el.querySelector(".done-btn .done-label");
+      if(lbl) lbl.textContent = done[id] ? STR.stepDone[lang] : STR.markDone[lang];
+    });
+    document.getElementById("pfill").style.width=(n/steps.length*100)+"%";
+  }
+  document.querySelectorAll(".done-btn").forEach(function(b){
+    b.addEventListener("click", function(){ var id=b.dataset.done; done[id]=!done[id]; saveDone(); refresh(); });
+  });
+
+  /* ---- theme toggle ---- */
+  var root=document.documentElement, tb=document.getElementById("themeBtn");
+  try{ var st=localStorage.getItem(KEY_THEME); if(st) root.setAttribute("data-theme",st); }catch(e){}
+  tb.addEventListener("click", function(){
+    var cur=root.getAttribute("data-theme");
+    var mqDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
+    var next = cur ? (cur==="dark"?"light":"dark") : (mqDark?"light":"dark");
+    root.setAttribute("data-theme",next);
+    try{ localStorage.setItem(KEY_THEME,next); }catch(e){}
+  });
+
+  /* ---- language toggle ---- */
+  document.getElementById("langBtn").addEventListener("click", function(){
+    applyLang(lang==="ko"?"en":"ko");
+  });
+
+  var savedLang="en";
+  try{ savedLang=localStorage.getItem(KEY_LANG)||"en"; }catch(e){}
+  applyLang(savedLang);
+})();
+</script>
+</body>
+</html>
