@@ -1,0 +1,1461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facility Digital Twin</title>
+<meta name="description" content="Week 11 practical: open a real BIM model (IFC) with ifcopenshell, join 253 room sensors, two weeks of BMS data and Korean complaints on the room number, build a clickable 3D digital twin with viser, and use it to find a stuck AHU valve.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+  :root{
+    --bg:#e9ecec; --surface:#ffffff; --surface-2:#f3f6f6;
+    --ink:#152220; --muted:#576560; --faint:#8a9793;
+    --border:#d6dedc; --border-strong:#c2cccb;
+    --accent:#0e7b7b; --accent-ink:#0a5c5c; --accent-wash:#e3f0ef;
+    --warn:#a85808; --warn-bg:#fbf1e4; --warn-border:#efd6b3;
+    --ok:#137a48; --ok-bg:#e8f4ec; --ok-border:#bfe1cb;
+    --code-bg:#0e1a19; --code-surface:#152625; --code-ink:#d6e4e1;
+    --code-muted:#7f938f; --code-prompt:#3fb7ac; --code-border:#233634;
+    --shadow:0 1px 2px rgba(20,40,38,.05),0 8px 24px -14px rgba(20,40,38,.22);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1211; --surface:#111a19; --surface-2:#16211f;
+      --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
+      --border:#22302e; --border-strong:#2d3d3a;
+      --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
+      --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
+      --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
+      --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
+      --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1211; --surface:#111a19; --surface-2:#16211f;
+    --ink:#e6edeb; --muted:#98a6a2; --faint:#6d7c78;
+    --border:#22302e; --border-strong:#2d3d3a;
+    --accent:#37c1bb; --accent-ink:#5fd4ce; --accent-wash:#12211f;
+    --warn:#e0a869; --warn-bg:#1f1a12; --warn-border:#3d3320;
+    --ok:#5cc487; --ok-bg:#101d16; --ok-border:#22392b;
+    --code-bg:#080f0e; --code-surface:#0f1918; --code-ink:#d3e2df;
+    --code-muted:#6f827e; --code-prompt:#40c4b8; --code-border:#1c2b29;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+    font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  html[lang="ko"] body{
+    font-family:"IBM Plex Sans","Noto Sans KR",ui-sans-serif,system-ui,sans-serif;
+  }
+  .wrap{max-width:940px;margin:0 auto;padding:0 24px}
+
+  /* progress bar */
+  .progress-bar{position:sticky;top:0;z-index:40;height:4px;background:transparent}
+  .progress-fill{height:100%;width:0;background:var(--accent);transition:width .35s ease}
+
+  /* header */
+  header{padding:56px 0 30px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent-ink);font-weight:600;margin:0 0 14px}
+  h1{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;
+    font-size:clamp(2.3rem,6vw,3.6rem);line-height:1.02;letter-spacing:-.02em;
+    margin:0 0 16px;text-wrap:balance}
+  .lede{font-size:1.12rem;color:var(--muted);max-width:60ch;margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:22px;
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--faint)}
+  .meta b{color:var(--muted);font-weight:600}
+  .slides-btn{display:inline-flex;align-items:center;gap:8px;margin-top:22px;
+    padding:10px 18px;background:var(--accent);color:#fff;font-weight:600;font-size:14px;
+    text-decoration:none;border-radius:8px;box-shadow:var(--shadow);
+    transition:background .2s,transform .1s}
+  .slides-btn:hover{background:var(--accent-ink)}
+  .slides-btn:active{transform:translateY(1px)}
+
+  /* sticky OS control */
+  .controls{position:sticky;top:4px;z-index:30;background:var(--bg);
+    padding:14px 0 12px;margin-bottom:8px;
+    border-bottom:1px solid var(--border)}
+  .controls-inner{display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between}
+  .os-label{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint);font-weight:600}
+  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:11px;padding:3px;gap:2px;flex-wrap:wrap}
+  .seg button{font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;font-weight:500;
+    color:var(--muted);background:transparent;border:0;padding:7px 13px;border-radius:8px;
+    cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+  .seg button:hover{color:var(--ink)}
+  .seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent-ink);
+    box-shadow:var(--shadow);font-weight:600}
+  .util{display:flex;align-items:center;gap:8px}
+  .theme-toggle,.lang-toggle{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:9px;
+    padding:8px 12px;cursor:pointer;transition:color .15s,border-color .15s}
+  .theme-toggle:hover,.lang-toggle:hover{color:var(--ink);border-color:var(--border-strong)}
+  .lang-toggle{font-weight:600;min-width:64px}
+  html[lang="ko"] .lang-toggle,html[lang="ko"] .os-label,html[lang="ko"] .eyebrow,
+  html[lang="ko"] .meta,html[lang="ko"] .code-tag{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
+
+  /* steps */
+  main{padding:20px 0 40px;counter-reset:step}
+  .step{display:grid;grid-template-columns:52px 1fr;gap:22px;
+    padding:30px 0;border-top:1px solid var(--border)}
+  .step:first-of-type{border-top:0}
+  .stepnum{position:relative}
+  .stepnum .dot{position:sticky;top:82px;width:52px;height:52px;border-radius:14px;
+    background:var(--surface);border:1.5px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;
+    font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:1.35rem;
+    color:var(--accent-ink);box-shadow:var(--shadow);transition:background .2s,border-color .2s,color .2s}
+  .step.done .stepnum .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+  .step.done .stepnum .dot::after{content:"✓";font-size:1.5rem}
+  .step.done .stepnum .dot span{display:none}
+  .step-body h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;
+    font-size:1.5rem;letter-spacing:-.01em;margin:2px 0 6px;text-wrap:balance}
+  .step-body p{margin:0 0 14px;color:var(--muted)}
+  .step-body p strong{color:var(--ink);font-weight:600}
+  .inline-link{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-wash);
+    font-weight:500}
+  .inline-link:hover{border-bottom-color:var(--accent)}
+  code.ic{font-family:"IBM Plex Mono",monospace;font-size:.86em;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:5px;
+    padding:1px 5px;color:var(--accent-ink)}
+
+  /* code block */
+  .code{background:var(--code-bg);border:1px solid var(--code-border);border-radius:12px;
+    overflow:hidden;margin:0 0 16px;box-shadow:var(--shadow)}
+  .code-head{display:flex;align-items:center;justify-content:space-between;
+    padding:8px 12px 8px 14px;background:var(--code-surface);border-bottom:1px solid var(--code-border)}
+  .code-tag{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--code-muted);font-weight:500}
+  .copy{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--code-muted);
+    background:transparent;border:1px solid var(--code-border);border-radius:7px;
+    padding:5px 10px;cursor:pointer;transition:color .15s,border-color .15s}
+  .copy:hover{color:var(--code-ink);border-color:var(--code-muted)}
+  .copy.copied{color:var(--code-prompt);border-color:var(--code-prompt)}
+  pre{margin:0;padding:14px 16px;overflow-x:auto}
+  pre code{font-family:"IBM Plex Mono",monospace;font-size:13.5px;line-height:1.7;
+    color:var(--code-ink);white-space:pre;display:block}
+  pre .cmt{color:var(--code-muted)}
+  pre .pr{color:var(--code-prompt);user-select:none}
+
+  /* os-specific visibility */
+  [data-os]{display:none}
+  [data-os].os-on{display:block}
+
+  /* callouts */
+  .callout{border-radius:12px;padding:16px 18px;margin:0 0 16px;border:1px solid;
+    display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start}
+  .callout .ci{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;
+    width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center}
+  .callout p{margin:0 0 8px}
+  .callout p:last-child{margin:0}
+  .callout .ct{font-weight:600;display:block;margin-bottom:3px}
+  .verify{background:var(--ok-bg);border-color:var(--ok-border)}
+  .verify .ci{background:var(--ok);color:#fff}
+  .verify .ct{color:var(--ok)}
+  .verify code.ic{background:transparent;border-color:var(--ok-border);color:var(--ok)}
+  .warn{background:var(--warn-bg);border-color:var(--warn-border)}
+  .warn .ci{background:var(--warn);color:#fff}
+  .warn .ct{color:var(--warn)}
+  .warn code.ic{background:transparent;border-color:var(--warn-border);color:var(--warn)}
+  .tip{background:var(--accent-wash);border-color:var(--border)}
+  .tip .ci{background:var(--accent);color:#fff}
+  .tip .ct{color:var(--accent-ink)}
+
+  /* lists (exercise) */
+  .step-body ol,.step-body ul{margin:0 0 16px;padding-left:22px}
+  .step-body li{margin:4px 0}
+  .step-body li ul{margin:4px 0 0}
+
+  /* done toggle */
+  .done-row{margin-top:6px}
+  .done-btn{display:inline-flex;align-items:center;gap:10px;
+    font-family:"IBM Plex Sans",sans-serif;font-size:14px;font-weight:500;color:var(--muted);
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:9px 15px;cursor:pointer;transition:color .15s,border-color .15s,background .15s}
+  .done-btn:hover{border-color:var(--border-strong);color:var(--ink)}
+  .done-btn .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;font-size:12px;transition:background .15s,border-color .15s}
+  .step.done .done-btn{color:var(--ok);border-color:var(--ok-border);background:var(--ok-bg)}
+  .step.done .done-btn .box{background:var(--ok);border-color:var(--ok);color:#fff}
+
+  /* cheat sheet */
+  .cheat{margin:12px 0 60px;border:1px solid var(--border);border-radius:16px;
+    background:var(--surface);padding:26px 26px 10px;box-shadow:var(--shadow)}
+  .cheat h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:1.4rem;
+    margin:0 0 4px;letter-spacing:-.01em}
+  .cheat p{color:var(--muted);margin:0 0 18px;font-size:.95rem}
+
+  footer{padding:20px 0 60px;border-top:1px solid var(--border);
+    color:var(--faint);font-family:"IBM Plex Mono",monospace;font-size:12px}
+  footer a{color:var(--accent-ink);text-decoration:none}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+  @media (max-width:620px){
+    .step{grid-template-columns:40px 1fr;gap:14px}
+    .stepnum .dot{width:40px;height:40px;font-size:1.05rem}
+    .stepnum .dot::after{font-size:1.15rem}
+    header{padding:40px 0 22px}
+  }
+
+  /* week 4 + 5 additions */
+  code.ic{overflow-wrap:anywhere}
+  .step-body{min-width:0}
+  .btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .btn-row .slides-btn{margin-top:0}
+  .ghost-btn{background:var(--surface);color:var(--accent-ink);border:1px solid var(--border)}
+  .ghost-btn:hover{background:var(--surface-2)}
+  .tree{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:4px 0;margin:0 0 16px;overflow-x:auto}
+  .tree table{width:100%;border-collapse:collapse;font-size:.92rem}
+  .tree td{padding:8px 14px;border-top:1px solid var(--border);vertical-align:top;color:var(--muted)}
+  .tree tr:first-child td{border-top:0}
+  .tree td:first-child{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--accent-ink);
+    white-space:nowrap;font-weight:500}
+  figure{margin:0 0 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    overflow:hidden;box-shadow:var(--shadow)}
+  figure img{display:block;width:100%;height:auto;background:#fff}
+  figcaption{padding:10px 14px;font-size:.88rem;color:var(--faint);border-top:1px solid var(--border)}
+  .fig-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 16px}
+  .fig-pair figure{margin:0}
+  .fig-pair img{aspect-ratio:4/3;object-fit:cover}
+  @media (max-width:620px){.fig-pair{grid-template-columns:1fr}}
+  /* course navigation */
+  .course-nav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 18px;margin:0 0 26px;
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px}
+  .course-nav a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid transparent}
+  .course-nav a:hover{border-bottom-color:var(--accent)}
+  .course-nav .pn{display:flex;flex-wrap:wrap;gap:8px 18px}
+  html[lang="ko"] .course-nav{font-family:"IBM Plex Mono","Noto Sans KR",monospace}
+</style>
+</head>
+<body>
+<div class="progress-bar"><div class="progress-fill" id="pfill"></div></div>
+
+<div class="wrap">
+  <header>
+    <nav class="course-nav" aria-label="Course navigation">
+      <a href="index.html" class="i18n" data-ko='← 강의 홈 (전체 목차)'>← Course home (all classes)</a>
+      <span class="pn">
+      <a href="week09.html" class="i18n" data-ko='‹ 9주차: LLM'>‹ Week 9: LLMs</a>
+      </span>
+    </nav>
+    <p class="eyebrow i18n" data-ko='스마트 시설 관리 - 실습 세션 · 11주차'>Smart Facility Management - Practical Session · Week 11 . (For any queries please feel free to reachout: mugojames254@skku.edu)</p>
+    <h1 class="i18n" data-ko='디지털 트윈: BIM, 센서, 민원을 한 화면에'>Digital Twin: BIM, sensors and complaints in one view</h1>
+    <p class="lede i18n" data-ko='지금까지 건물을 <strong>스캔</strong>하고 (4·5주차), 민원을 <strong>읽었습니다</strong> (9주차). 오늘은 건물이 <strong>스스로 측정한 값</strong>까지 더해 하나로 묶습니다. 실제 연구동의 <strong>BIM 모델 (IFC)</strong> 에 센서 253개, 2주간의 BMS 데이터, 민원 36건을 <strong>방 번호 하나로 연결</strong>하고, 방을 클릭하면 모든 것이 보이는 3D 디지털 트윈을 만듭니다. 그리고 그 트윈으로 9월 16일에 무슨 일이 있었는지 직접 찾아냅니다.'>So far we have <strong>scanned</strong> a building (Weeks 4–5) and <strong>read</strong> its complaints (Week 9). Today we add what the building <strong>measures about itself</strong> and put everything together. We take a real research institute's <strong>BIM model (IFC)</strong>, 253 room sensors, two weeks of BMS data and 36 complaints, <strong>join them on one key — the room number</strong>, and build a 3D digital twin where clicking a room shows everything about it. Then we use the twin to find out what went wrong on 16 September.</p>
+    <div class="meta">
+      <span class="i18n" data-ko='<b>프로젝트</b> facility-twin (새 프로젝트)'><b>Project</b> facility-twin (new)</span>
+      <span class="i18n" data-ko='<b>라이브러리</b> ifcopenshell · viser · pandas · plotly'><b>Libraries</b> ifcopenshell · viser · pandas · plotly</span>
+      <span class="i18n" data-ko='<b>데이터</b> IFC 모델 · BMS 센서 2주 · 민원 36건 (교육용 가상 데이터)'><b>Data</b> IFC model · 2 weeks of BMS data · 36 complaints (synthetic teaching data)</span>
+      <span class="i18n" data-ko='<b>새 개념</b> BIM/IFC · 디지털 트윈 · BMS 포인트 · 고장 진단'><b>New ideas</b> BIM/IFC · digital twin · BMS points · fault detection</span>
+    </div>
+    <div class="btn-row">
+      <a class="slides-btn" href="week11_data.zip" download>
+        <span aria-hidden="true">⬇</span>
+        <span class="i18n" data-ko='11주차 데이터 내려받기 (.zip, 2.9 MB)'>Download Week 11 data (.zip, 2.9 MB)</span>
+      </a>
+      <a class="slides-btn ghost-btn" href="week09.html">
+        <span aria-hidden="true">←</span>
+        <span class="i18n" data-ko='9주차: LLM'>Week 9: LLMs</span>
+      </a>
+    </div>
+  </header>
+</div>
+
+<div class="controls">
+  <div class="wrap controls-inner">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="os-label i18n" data-ko='사용 중인 시스템'>Your system</span>
+      <div class="seg" role="group" aria-label="Choose your operating system">
+        <button data-set="win-cmd" aria-pressed="true">Windows · cmd</button>
+        <button data-set="win-ps" aria-pressed="false">Windows · PowerShell</button>
+        <button data-set="mac" aria-pressed="false">macOS</button>
+        <button data-set="linux" aria-pressed="false">Linux</button>
+      </div>
+    </div>
+    <div class="util">
+      <button class="lang-toggle" id="langBtn" aria-label="Switch language">한국어</button>
+      <button class="theme-toggle" id="themeBtn" aria-label="Toggle color theme">◐ theme</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <main>
+
+    <!-- STEP 0 : PROJECT + DATA -->
+    <section class="step" id="s0">
+      <div class="stepnum"><div class="dot"><span>0</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='프로젝트 만들기와 데이터 받기'>Create the project and get the data</h2>
+        <p class="i18n" data-ko='4주차와 같은 방법으로 새 uv 프로젝트를 만듭니다. <code class="ic">ifcopenshell</code> 은 BIM 파일(IFC)을 읽고, <code class="ic">viser</code> 는 Python에서 만든 3D 장면을 <strong>브라우저</strong>에 보여 줍니다.'>Create a new uv project as in Week 4. <code class="ic">ifcopenshell</code> reads BIM files (IFC), and <code class="ic">viser</code> shows a 3D scene built in Python <strong>in your browser</strong>.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템'>all systems</span><button class="copy">copy</button></div>
+<pre><code>uv init --python 3.12 --no-package facility-twin
+cd facility-twin
+uv add ifcopenshell viser pandas numpy plotly matplotlib</code></pre>
+        </div>
+        <p class="i18n" data-ko='이번 주 데이터를 <strong>프로젝트 폴더 안에서</strong> 받으세요:'>Download this week's data <strong>inside the project folder</strong>:</p>
+        <div data-os="win-cmd" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · Command Prompt</span><button class="copy">copy</button></div>
+<pre><code>curl -L -o week11_data.zip https://mugojames254.github.io/smart_facility_coursework/week11_data.zip
+tar -xf week11_data.zip</code></pre>
+          </div>
+        </div>
+        <div data-os="win-ps" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · PowerShell</span><button class="copy">copy</button></div>
+<pre><code>curl.exe -L -o week11_data.zip https://mugojames254.github.io/smart_facility_coursework/week11_data.zip
+tar -xf week11_data.zip</code></pre>
+          </div>
+        </div>
+        <div data-os="mac linux" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">macOS / Linux</span><button class="copy">copy</button></div>
+<pre><code>curl -L -o week11_data.zip https://mugojames254.github.io/smart_facility_coursework/week11_data.zip
+unzip week11_data.zip</code></pre>
+          </div>
+        </div>
+        <div class="tree">
+          <table>
+            <tr><td>building_twin.ifc</td><td class="i18n" data-ko='5개 층, 방 82개의 연구동 <strong>BIM 모델</strong> (IFC4, 11 MB). 독일 KIT의 공개 샘플 모델에 이번 수업용으로 <strong>공조기 2대 (AHU-1, AHU-2), 공조 구역, 센서 253개</strong>를 추가했습니다.'>The <strong>BIM model</strong> of a 5-floor research institute with 82 rooms (IFC4, 11 MB). Based on KIT's open sample model; for this class we added <strong>2 air handling units (AHU-1, AHU-2), their zones and 253 sensors</strong>.</td></tr>
+            <tr><td>rooms_ko.csv</td><td class="i18n" data-ko='<strong>우리 시설팀의 데이터</strong>: 방마다 한국어 이름, 용도, 면적, 창이 향한 방향, 담당 공조기. IFC의 방 번호로 연결됩니다.'><strong>Our facility team's data</strong>: Korean name, use, area, facade and AHU for each room. Linked to the IFC by room number.</td></tr>
+            <tr><td>sensors.csv</td><td class="i18n" data-ko='BMS 포인트 목록 261개: 포인트 이름 (예: <code class="ic">AHU2.R203.ZN-T</code>), 방, 측정량, 단위, IFC GlobalId.'>The BMS point list, 261 points: point name (e.g. <code class="ic">AHU2.R203.ZN-T</code>), room, quantity, unit, IFC GlobalId.</td></tr>
+            <tr><td>readings.csv</td><td class="i18n" data-ko='BMS에서 내보낸 측정값 약 35만 줄: 2026년 9월 7일~20일, 15분마다.'>The BMS export, about 350,000 rows: every point every 15 minutes, 7–20 September 2026.</td></tr>
+            <tr><td>weather.csv</td><td class="i18n" data-ko='같은 2주 동안 <strong>수원의 실제 날씨</strong> (Open-Meteo).'>The <strong>real Suwon weather</strong> for the same two weeks (Open-Meteo).</td></tr>
+            <tr><td>complaints.csv</td><td class="i18n" data-ko='민원 36건 (카카오톡, 웹, 전화). <code class="ic">closed_at</code> 이 비어 있으면 아직 처리 중입니다.'>36 complaints (KakaoTalk, web, phone). An empty <code class="ic">closed_at</code> means the ticket is still open.</td></tr>
+          </table>
+        </div>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='무엇이 진짜이고 무엇이 가상인가요?'>What is real and what is synthetic?</span>
+            <p class="i18n" data-ko='<strong>건물 모델과 날씨는 진짜</strong>입니다. 센서 값과 민원은 그 건물의 방 크기, 창 방향, 수원의 날씨, 사용 일정으로 <strong>물리 시뮬레이션</strong>한 교육용 데이터입니다. 그래서 숫자는 그럴듯하게 움직이지만, 실제 사람의 민원은 아닙니다. 데이터 안에는 시설팀이 찾아야 할 <strong>문제 몇 가지가 숨어 있습니다</strong>.'><strong>The building model and the weather are real.</strong> The sensor values and complaints are teaching data from a <strong>physics simulation</strong> driven by the real room sizes, window directions, Suwon weather and usage schedules, so the numbers behave plausibly, but no real person wrote these complaints. A few <strong>problems are hidden in the data</strong> for you to find.</p>
+          </div>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='프로젝트 폴더 안에 <code class="ic">data</code> 폴더가 있고, 위의 파일 6개와 <code class="ic">README.md</code> 가 들어 있으면 됩니다.'>Your project folder has a <code class="ic">data</code> folder with the six files above plus a <code class="ic">README.md</code>.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s0"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 1 : IFC -->
+    <section class="step" id="s1">
+      <div class="stepnum"><div class="dot"><span>1</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='BIM 모델 열어 보기: 층, 방, 센서, 공조기'>Open the BIM model: floors, rooms, sensors, AHUs</h2>
+        <p class="i18n" data-ko='4주차의 포인트 클라우드는 <strong>점</strong>뿐이었고, 5주차의 메시는 <strong>삼각형</strong>뿐이었습니다. BIM은 다릅니다. IFC 파일 안의 모든 것은 <strong>종류가 있는 객체</strong>입니다: 벽은 <code class="ic">IfcWall</code>, 방은 <code class="ic">IfcSpace</code>, 센서는 <code class="ic">IfcSensor</code>. 그리고 객체끼리 관계가 있습니다: 건물 → 층 → 방 → 방 안의 센서. 그래서 IFC는 3D 모델이면서 동시에 <strong>건물의 데이터베이스</strong>입니다.'>A Week 4 point cloud was only <strong>points</strong>; a Week 5 mesh was only <strong>triangles</strong>. BIM is different: everything in an IFC file is an <strong>object with a type</strong> — a wall is an <code class="ic">IfcWall</code>, a room is an <code class="ic">IfcSpace</code>, a sensor is an <code class="ic">IfcSensor</code> — and objects are linked: building → floor → room → sensors in the room. So an IFC file is a 3D model and, at the same time, <strong>a database of the building</strong>.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">explore_ifc.py</span><button class="copy">copy</button></div>
+<pre><code>import ifcopenshell
+import ifcopenshell.util.element as ue
+import pandas as pd
+
+model = ifcopenshell.open("data/building_twin.ifc")
+print("Schema:", model.schema)
+
+<span class="cmt"># 1. The spatial tree: building -&gt; storeys -&gt; spaces (rooms)</span>
+for storey in model.by_type("IfcBuildingStorey"):
+    spaces = [s for s in ue.get_decomposition(storey) if s.is_a("IfcSpace")]
+    print(f"{storey.Name:16s} elevation {storey.Elevation:5.1f} m   {len(spaces):2d} rooms")
+
+<span class="cmt"># 2. How many of each element? (BIM = objects with a type, not just triangles)</span>
+for cls in ["IfcWall", "IfcDoor", "IfcWindow", "IfcFurnishingElement",
+            "IfcUnitaryEquipment", "IfcSensor"]:
+    print(f"{cls:22s} {len(model.by_type(cls))}")
+
+<span class="cmt"># 3. One room: its IFC attributes, and what is inside it</span>
+room = next(s for s in model.by_type("IfcSpace") if s.Name == "203")
+print("\nRoom", room.Name, "|", room.LongName, "| GlobalId", room.GlobalId)
+for el in sorted(ue.get_contained(room), key=lambda e: e.Name):
+    print("  contains", el.is_a(), el.Name, ue.get_pset(el, "SFM_Sensor", "Unit"))
+
+<span class="cmt"># 4. Air handling units and the rooms they serve (IfcZone groups)</span>
+for zone in model.by_type("IfcZone"):
+    rooms = sorted(r.Name for r in zone.IsGroupedBy[0].RelatedObjects)
+    print(f"\n{zone.Name}: {len(rooms)} rooms, e.g. {rooms[:8]}")
+
+<span class="cmt"># 5. Join our own facility data (Korean names) on the room number</span>
+ifc_rooms = pd.DataFrame([{"room": s.Name, "name_ifc": s.LongName, "guid": s.GlobalId}
+                          for s in model.by_type("IfcSpace")])
+ours = pd.read_csv("data/rooms_ko.csv", dtype={"room": str})
+rooms = ifc_rooms.merge(ours[["room", "floor", "name_ko", "use", "area_m2", "facade", "ahu"]], on="room")
+print()
+print(rooms[rooms.floor == "2F"].sort_values("room").head(8).to_string(index=False))</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 결과'>run it · output</span><button class="copy">copy</button></div>
+<pre><code><span class="pr">$ </span>uv run explore_ifc.py
+Schema: IFC4
+Keller           elevation  -3.0 m   17 rooms
+Erdgeschoss      elevation   0.0 m   18 rooms
+1. Obergeschoss  elevation   3.0 m   22 rooms
+2. Obergeschoss  elevation   6.0 m   22 rooms
+Dachgeschoss     elevation   9.0 m    3 rooms
+IfcWall                121
+IfcDoor                77
+IfcWindow              206
+IfcFurnishingElement   253
+IfcUnitaryEquipment    2
+IfcSensor              253
+
+Room 203 | Buero Mueller VIII + IX | GlobalId 0UiHARbFzF1RT4g_GKem_B
+  contains IfcSensor AHU2.R203.ZN-CO2 ppm
+  contains IfcSensor AHU2.R203.ZN-OCC persons
+  contains IfcSensor AHU2.R203.ZN-RH %RH
+  contains IfcSensor AHU2.R203.ZN-T degC
+
+AHU-1 공조구역: 35 rooms, e.g. ['001', '002', '003', '004', '005', '006', '007', '008']
+
+AHU-2 공조구역: 44 rooms, e.g. ['201', '202', '203', '204', '205', '206', '207', '208']
+
+room                name_ifc                   guid floor name_ko    use  area_m2 facade   ahu
+ 201       Buero Obermueller 0uC7OD3$5F7v$zL3aaoEig    2F     교수실 office     24.6      S AHU-2
+ 202  Buero Mueller VI + VII 3shuyF_Yb7yu2P$QLB2s8G    2F     교수실 office     25.5      S AHU-2
+ 203 Buero Mueller VIII + IX 0UiHARbFzF1RT4g_GKem_B    2F     교수실 office     25.5      S AHU-2
+ 204       Buero Oberschmitt 1yZQvqj15Ab8eMXDuz85Dy    2F     교수실 office     25.5      S AHU-2
+ 205        Buero Schmitt II 3iSzpa9d93jhTDB7hG0QBW    2F     교수실 office     12.3      S AHU-2
+ 206          Buero IL Sekr. 2goaA6RR92B9xducYbaQVU    2F     행정실  admin     25.5      S AHU-2
+ 207                Buero IL 24vVAUYDH2SetutQQsZBMv    2F   연구소장실 office     37.8      S AHU-2
+ 208        Buero Schmied II 2E2TaOnqD0chpbuH8tXCpW    2F     교수실 office     11.4      N AHU-2</code></pre>
+        </div>
+        <div class="tree">
+          <table>
+            <tr><td>by_type</td><td class="i18n" data-ko='한 종류의 객체를 모두 가져옵니다. <code class="ic">model.by_type(&quot;IfcSensor&quot;)</code> = 센서 253개.'>Gets every object of one type. <code class="ic">model.by_type("IfcSensor")</code> = all 253 sensors.</td></tr>
+            <tr><td>get_contained</td><td class="i18n" data-ko='방(또는 층) <strong>안에 있는</strong> 객체들. 203호 안에는 센서 4개가 있습니다.'>The objects <strong>inside</strong> a room (or floor). Room 203 holds four sensors.</td></tr>
+            <tr><td>IfcZone</td><td class="i18n" data-ko='방들의 묶음. 여기서는 &quot;공조기 한 대가 냉방하는 방들&quot; 입니다. 나중에 원인을 찾을 때 씁니다.'>A group of rooms — here, "the rooms one AHU cools". We will need this to find the cause later.</td></tr>
+            <tr><td>merge(on=&quot;room&quot;)</td><td class="i18n" data-ko='IFC의 방 번호와 <strong>우리 시설팀의 표</strong>를 연결합니다. 디지털 트윈의 핵심은 이렇게 <strong>같은 키로 여러 데이터를 잇는 것</strong>입니다.'>Joins the IFC room numbers with <strong>our own facility table</strong>. This is the heart of a digital twin: <strong>linking different data on the same key</strong>.</td></tr>
+          </table>
+        </div>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <ul>
+              <li class="i18n" data-ko='<code class="ic">&quot;203&quot;</code> 을 <code class="ic">&quot;006&quot;</code> 으로 바꿔 보세요. 세미나실의 IFC 이름과 센서는 무엇인가요?'>Change <code class="ic">"203"</code> to <code class="ic">"006"</code>. What is the seminar room called in the IFC, and which sensors does it have?</li>
+              <li class="i18n" data-ko='<code class="ic">model.by_type(&quot;IfcUnitaryEquipment&quot;)</code> 의 두 공조기를 출력하고, <code class="ic">ue.get_container(...)</code> 로 어느 방에 있는지 찾아보세요.'>Print the two units in <code class="ic">model.by_type("IfcUnitaryEquipment")</code> and use <code class="ic">ue.get_container(...)</code> to find which room each one stands in.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s1"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 2 : 3D VIEW -->
+    <section class="step" id="s2">
+      <div class="stepnum"><div class="dot"><span>2</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='건물을 3D로 보기 (viser)'>See the building in 3D (viser)</h2>
+        <p class="i18n" data-ko='IFC의 벽, 문, 창은 &quot;두께 20 cm, 높이 2.7 m 벽&quot; 처럼 <strong>모양을 만드는 규칙</strong>으로 저장되어 있습니다. <code class="ic">ifcopenshell.geom</code> 이 그 규칙을 5주차에서 본 <strong>삼각형 메시</strong>로 바꿔 줍니다. 아래 모듈은 메시를 층과 종류(벽, 창, 문…)별로 묶어서, 한 층씩 보여 줄 수 있게 합니다. 다음 단계에서도 다시 씁니다.'>IFC walls, doors and windows are stored as <strong>rules for making a shape</strong> ("a wall 20 cm thick and 2.7 m high"). <code class="ic">ifcopenshell.geom</code> turns those rules into the <strong>triangle meshes</strong> you met in Week 5. This module groups the meshes by floor and by kind (walls, windows, doors…) so we can show one floor at a time. We will reuse it later.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">twin_geometry.py</span><button class="copy">copy</button></div>
+<pre><code>"""Turn the IFC model into triangle meshes, grouped so the viewer can show one floor at a time."""
+import multiprocessing
+
+import numpy as np
+import ifcopenshell
+import ifcopenshell.geom
+import ifcopenshell.util.element as ue
+
+FLOORS = {"Keller": "B1", "Erdgeschoss": "1F", "1. Obergeschoss": "2F",
+          "2. Obergeschoss": "3F", "Dachgeschoss": "4F"}
+
+<span class="cmt"># element class -&gt; (group name, colour, opacity)</span>
+STYLE = {
+    "IfcWall": ("wall", (226, 221, 212), 1.0),
+    "IfcSlab": ("slab", (190, 186, 178), 1.0),
+    "IfcRoof": ("roof", (150, 92, 76), 1.0),
+    "IfcWindow": ("window", (140, 190, 225), 0.45),
+    "IfcDoor": ("door", (140, 105, 75), 1.0),
+    "IfcStair": ("stair", (170, 165, 155), 1.0),
+    "IfcStairFlight": ("stair", (170, 165, 155), 1.0),
+    "IfcRailing": ("stair", (90, 90, 90), 1.0),
+    "IfcFurnishingElement": ("furniture", (205, 170, 115), 1.0),
+    "IfcUnitaryEquipment": ("equipment", (235, 120, 40), 1.0),
+}
+SKIP = ("IfcOpeningElement", "IfcSite", "IfcSpace", "IfcSensor", "IfcAnnotation")
+
+
+def storey_of(element):
+    """The storey an element belongs to (elements inside a room -&gt; that room's storey)."""
+    parent = ue.get_container(element) or ue.get_aggregate(element)
+    while parent is not None and not parent.is_a("IfcBuildingStorey"):
+        parent = ue.get_container(parent) or ue.get_aggregate(parent)
+    return FLOORS.get(parent.Name, "?") if parent is not None else "?"
+
+
+def merge(parts):
+    """Join many (vertices, faces) pairs into one mesh."""
+    verts, faces, offset = [], [], 0
+    for v, f in parts:
+        verts.append(v)
+        faces.append(f + offset)
+        offset += len(v)
+    return np.vstack(verts).astype(np.float32), np.vstack(faces).astype(np.uint32)
+
+
+def load_building(path="data/building_twin.ifc"):
+    """Returns (groups, rooms, sensors).
+
+    groups : {(floor, group): (vertices, faces, colour, opacity)}  - walls, doors, ... merged per floor
+    rooms  : {room number: {"floor", "vertices", "faces"}}          - one mesh per IfcSpace
+    sensors: {point id: (x, y, z)}                                  - centre of each IfcSensor
+    """
+    model = ifcopenshell.open(path)
+    settings = ifcopenshell.geom.settings()
+    settings.set("use-world-coords", True)  <span class="cmt"># every vertex in building coordinates (metres)</span>
+
+    parts, rooms, sensors = {}, {}, {}
+    iterator = ifcopenshell.geom.iterator(settings, model, multiprocessing.cpu_count())
+    if iterator.initialize():
+        while True:
+            shape = iterator.get()
+            el = model.by_id(shape.id)
+            v = np.array(shape.geometry.verts).reshape(-1, 3)
+            f = np.array(shape.geometry.faces).reshape(-1, 3)
+            if len(f):
+                if el.is_a("IfcSpace"):
+                    rooms[el.Name] = {"floor": storey_of(el), "vertices": v.astype(np.float32),
+                                      "faces": f.astype(np.uint32)}
+                elif el.is_a("IfcSensor"):
+                    sensors[el.Name] = tuple(v.mean(axis=0))
+                elif not el.is_a() in SKIP:
+                    key = next((c for c in STYLE if el.is_a(c)), None)
+                    group, colour, opacity = STYLE[key] if key else ("other", (180, 180, 180), 1.0)
+                    parts.setdefault((storey_of(el), group, colour, opacity), []).append((v, f))
+            if not iterator.next():
+                break
+
+    groups = {}
+    for (floor, group, colour, opacity), p in parts.items():
+        v, f = merge(p)
+        if (floor, group) in groups:  <span class="cmt"># e.g. stairs and railings share a group</span>
+            v0, f0, c0, o0 = groups[(floor, group)]
+            v, f = merge([(v0, f0), (v, f)])
+        groups[(floor, group)] = (v, f, colour, opacity)
+    return groups, rooms, sensors
+
+
+if __name__ == "__main__":
+    import time
+    t0 = time.time()
+    groups, rooms, sensors = load_building()
+    print(f"{len(groups)} mesh groups, {len(rooms)} rooms, {len(sensors)} sensors in {time.time() - t0:.1f} s")
+    for (floor, group), (v, f, _, _) in sorted(groups.items()):
+        print(f"  {floor} {group:10s} {len(f):6d} triangles")</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='모듈 시험 · 실행 결과 (일부)'>test the module · output (start)</span><button class="copy">copy</button></div>
+<pre><code><span class="pr">$ </span>uv run twin_geometry.py
+29 mesh groups, 82 rooms, 253 sensors in 1.8 s
+  1F door          936 triangles
+  1F furniture     912 triangles
+  1F other         248 triangles
+  1F slab           80 triangles
+  1F stair        1017 triangles
+  ...</code></pre>
+        </div>
+        <p class="i18n" data-ko='이제 <strong>viser</strong> 로 보여 줍니다. viser는 Python에서 작은 웹 서버를 띄우고, 3D 장면과 버튼을 <strong>브라우저</strong>로 보냅니다. 방(<code class="ic">IfcSpace</code>)은 따로 하나씩 메시로 만들어 <strong>클릭할 수 있게</strong> 합니다.'>Now show it with <strong>viser</strong>. viser starts a small web server from Python and sends the 3D scene and the controls to <strong>your browser</strong>. Each room (<code class="ic">IfcSpace</code>) gets its own mesh so that it can be <strong>clicked</strong>.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">view_building.py</span><button class="copy">copy</button></div>
+<pre><code>import time
+
+import pandas as pd
+import viser
+
+from twin_geometry import load_building
+
+groups, rooms, sensors = load_building("data/building_twin.ifc")
+info = pd.read_csv("data/rooms_ko.csv", dtype={"room": str}).set_index("room")
+
+server = viser.ViserServer()
+server.scene.set_up_direction("+z")
+server.scene.configure_environment_map(environment_intensity=0.5)  <span class="cmt"># softer light, truer colours</span>
+
+
+@server.on_client_connect
+def start_view(client):  <span class="cmt"># look at the building from the south-east, from above</span>
+    client.camera.position = (37.0, -16.0, 19.0)
+    client.camera.look_at = (23.0, 8.0, 0.0)
+
+
+<span class="cmt"># 1. The building: one mesh per (floor, element group)</span>
+building = {}
+for (floor, group), (v, f, colour, opacity) in groups.items():
+    building[(floor, group)] = server.scene.add_mesh_simple(
+        f"/building/{floor}/{group}", v, f, color=colour, opacity=opacity, flat_shading=True)
+
+<span class="cmt"># 2. The rooms: one clickable mesh per IfcSpace</span>
+room_mesh = {}
+for room, r in rooms.items():
+    v = r["vertices"].copy()
+    v[:, 2] = v[:, 2].clip(max=v[:, 2].min() + 2.5)  <span class="cmt"># stop just under the ceiling</span>
+    room_mesh[room] = server.scene.add_mesh_simple(
+        f"/rooms/{room}", v, r["faces"], color=(90, 160, 220), opacity=0.35)
+
+<span class="cmt"># 3. The side panel</span>
+floor_pick = server.gui.add_dropdown("Floor", ("All", "B1", "1F", "2F", "3F", "4F"), initial_value="2F")
+panel = server.gui.add_markdown("Click a room.")
+
+
+def show_floor(_=None):
+    fl = floor_pick.value
+    for (floor, group), h in building.items():
+        h.visible = (fl == "All") or (floor == fl and group != "roof")
+    for room, h in room_mesh.items():
+        h.visible = (fl == "All") or rooms[room]["floor"] == fl
+
+
+floor_pick.on_update(show_floor)
+show_floor()
+
+
+def make_click(room):
+    def on_click(event):
+        r = info.loc[room]
+        panel.content = (f"### {room}호 · {r.name_ko}\n"
+                         f"IFC name: *{r.name_ifc}*  \n"
+                         f"Floor **{r.floor}** · {r.area_m2} m² · facade {r.facade} · {r.ahu}")
+        for name, h in room_mesh.items():
+            h.color = (240, 90, 60) if name == room else (90, 160, 220)
+    return on_click
+
+
+for room, h in room_mesh.items():
+    h.on_click(make_click(room))
+
+print("Open http://localhost:8080 in your browser. Ctrl+C to stop.")
+while True:
+    time.sleep(10)</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 후 브라우저에서 http://localhost:8080 열기'>run, then open http://localhost:8080 in your browser</span><button class="copy">copy</button></div>
+          <pre><code>uv run view_building.py</code></pre>
+        </div>
+        <figure>
+          <img src="assets/week11_building.jpg" alt="The second floor of the institute in a browser: walls, doors, windows and stairs, with room 207 highlighted in orange and the side panel showing 207호 연구소장실, IFC name Buero IL, 37.8 m², facade S, AHU-2" loading="lazy">
+          <figcaption class="i18n" data-ko='2층을 위에서 본 모습. 207호를 클릭하면 IFC 이름(Buero IL)과 우리 표의 한국어 이름(연구소장실)이 함께 나옵니다.'>The second floor from above. Clicking room 207 shows its IFC name (Buero IL) next to the Korean name from our own table (연구소장실).</figcaption>
+        </figure>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='브라우저에 2층이 보이고, 마우스로 돌리기(왼쪽 드래그), 이동(오른쪽 드래그), 확대(휠)가 됩니다. 방을 클릭하면 주황색으로 바뀌고 오른쪽 패널에 방 정보가 나옵니다. <strong>Floor</strong> 에서 다른 층도 골라 보세요.'>The second floor appears in your browser. Rotate with left-drag, pan with right-drag, zoom with the wheel. Click a room: it turns orange and the panel shows its details. Pick other floors in <strong>Floor</strong>.</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <div class="ci">!</div>
+          <div><span class="ct i18n" data-ko='알아 두기'>Good to know</span>
+            <p class="i18n" data-ko='프로그램을 끝낼 때는 터미널에서 <code class="ic">Ctrl+C</code>. 끝내지 않고 다른 viser 프로그램을 실행하면 8080 포트가 이미 쓰이고 있어서 <code class="ic">8081</code> 등 다른 주소가 출력됩니다. 터미널에 나온 주소를 여세요. viser의 패널은 <strong>모든 브라우저 탭이 공유</strong>합니다. 한 탭에서 층을 바꾸면 다른 탭도 바뀝니다.'>Stop a program with <code class="ic">Ctrl+C</code> in the terminal. If you start another viser program while one is still running, port 8080 is taken and viser prints a different address such as <code class="ic">8081</code>; open the address the terminal shows. The viser panel is <strong>shared by all browser tabs</strong>: change the floor in one tab and every tab follows.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s2"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 3 : SENSOR DATA -->
+    <section class="step" id="s3">
+      <div class="stepnum"><div class="dot"><span>3</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='센서 데이터 읽기: 어느 방이 덥고 답답했나?'>Read the sensor data: which rooms were too warm or too stuffy?</h2>
+        <p class="i18n" data-ko='BMS(빌딩 자동제어 시스템)는 보통 <strong>한 줄에 측정값 하나</strong> (시각, 포인트, 값) 로 내보냅니다. 포인트 이름이 곧 주소입니다: <code class="ic">AHU2.R203.ZN-T</code> = AHU-2 구역, 203호, 실내 온도. 분석하려면 <code class="ic">pivot</code> 으로 <strong>포인트마다 한 열</strong>인 표로 바꿉니다.'>A BMS (building management system) usually exports <strong>one reading per row</strong>: time, point, value. The point name is an address: <code class="ic">AHU2.R203.ZN-T</code> = AHU-2 zone, room 203, zone temperature. To analyse it we <code class="ic">pivot</code> to a table with <strong>one column per point</strong>.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">sensor_data.py</span><button class="copy">copy</button></div>
+<pre><code>import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import pandas as pd
+
+rooms = pd.read_csv("data/rooms_ko.csv", dtype={"room": str})
+sensors = pd.read_csv("data/sensors.csv", dtype={"room": str})
+readings = pd.read_csv("data/readings.csv", parse_dates=["timestamp"])
+weather = pd.read_csv("data/weather.csv", parse_dates=["timestamp"])
+print(f"{len(readings):,} readings from {readings.point_id.nunique()} points, "
+      f"{readings.timestamp.min()} to {readings.timestamp.max()}")
+
+<span class="cmt"># 1. Long format (one row per reading) -&gt; wide (one column per point)</span>
+wide = readings.pivot(index="timestamp", columns="point_id", values="value")
+print(wide.shape, "(time steps x points)")
+
+<span class="cmt"># 2. One room over two weeks, next to the weather</span>
+fig, ax = plt.subplots(figsize=(13, 4.5))
+ax.plot(weather.timestamp, weather.temp_c, color="0.6", lw=1, label="outdoor (Suwon)")
+for pid, colour in [("AHU2.R203.ZN-T", "tab:red"), ("AHU2.R210.ZN-T", "tab:blue"),
+                    ("AHU1.R102.ZN-T", "tab:green")]:
+    ax.plot(wide.index, wide[pid], color=colour, lw=1.2, label=pid)
+ax.axhline(26, color="k", ls=":", lw=1)
+ax.set_ylabel("°C")
+ax.set_title("Room temperature, 7–20 Sep 2026")
+ax.legend(loc="upper left", ncol=4, fontsize=9)
+fig.tight_layout()
+fig.savefig("room_temperatures.png", dpi=110)
+print("saved room_temperatures.png")
+
+<span class="cmt"># 3. Comfort check: during working hours, how long was each room too warm or too stuffy?</span>
+work = wide[(wide.index.day_of_week &lt; 5) &amp; (wide.index.hour &gt;= 9) &amp; (wide.index.hour &lt; 18)]
+rows = []
+for room, pts in sensors[sensors.ifc_class == "IfcSensor"].groupby("room"):
+    q = dict(zip(pts.quantity, pts.point_id))
+    if "co2" not in q:  <span class="cmt"># only rooms where people work</span>
+        continue
+    rows.append({"room": room,
+                 "hours_over_26C": (work[q["temperature"]] &gt; 26).sum() / 4,  <span class="cmt"># 4 readings per hour</span>
+                 "hours_over_1000ppm": (work[q["co2"]] &gt; 1000).sum() / 4,
+                 "max_temp": work[q["temperature"]].max(),
+                 "max_co2": work[q["co2"]].max()})
+comfort = pd.DataFrame(rows).merge(rooms[["room", "name_ko", "floor", "facade", "ahu"]], on="room")
+print("\nToo warm (hours over 26 °C in working hours):")
+print(comfort.sort_values("hours_over_26C", ascending=False).head(10).to_string(index=False))
+print("\nToo stuffy (hours over 1000 ppm CO2 in working hours):")
+print(comfort.sort_values("hours_over_1000ppm", ascending=False).head(5).to_string(index=False))</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 결과'>run it · output</span><button class="copy">copy</button></div>
+<pre><code><span class="pr">$ </span>uv run sensor_data.py
+349,107 readings from 261 points, 2026-09-07 00:00:00 to 2026-09-20 23:45:00
+(1344, 261) (time steps x points)
+saved room_temperatures.png
+
+Too warm (hours over 26 °C in working hours):
+room  hours_over_26C  hours_over_1000ppm  max_temp  max_co2 name_ko floor facade   ahu
+ 302           11.50                 0.0      29.5    930.0     연구실    3F      S AHU-2
+ 205           11.25                 0.0      28.7    700.0     교수실    2F      S AHU-2
+ 307           10.25                 0.0      29.9    960.0     연구실    3F      S AHU-2
+ 203           10.25                 0.0      28.7    695.0     교수실    2F      S AHU-2
+ 201           10.00                 0.0      28.8    705.0     교수실    2F      S AHU-2
+ 306           10.00                 0.0      29.5    940.0     연구실    3F      S AHU-2
+ 305           10.00                 0.0      29.2    940.0     연구실    3F      S AHU-2
+ 301           10.00                 0.0      29.7    955.0     연구실    3F      S AHU-2
+ 207            9.75                 0.0      28.4    840.0   연구소장실    2F      S AHU-2
+ 303            9.75                 0.0      29.3    950.0     연구실    3F      S AHU-2
+
+Too stuffy (hours over 1000 ppm CO2 in working hours):
+room  hours_over_26C  hours_over_1000ppm  max_temp  max_co2 name_ko floor facade   ahu
+ 105             0.0               27.00      25.3   1170.0 대학원생실 1    1F      S AHU-1
+ 006             0.0               11.00      25.6   1580.0    세미나실    B1     NS AHU-1
+ 002             0.0                7.25      25.7   1210.0   회의실 2    B1      S AHU-1
+ 001             0.0                3.25      26.0   1200.0   회의실 1    B1      S AHU-1
+ 010             0.0                0.00      25.4    715.0  실험실 B1    B1      N AHU-1</code></pre>
+        </div>
+        <figure>
+          <img src="assets/week11_room_temperatures.jpg" alt="Line chart of outdoor temperature and three rooms over two weeks: all rooms stay between 22 and 26 °C until 16 September, then room 203 rises to 28 °C on 16 and 17 September while room 210 and room 102 stay normal" loading="lazy">
+          <figcaption class="i18n" data-ko='room_temperatures.png: 9월 8일이 가장 더웠지만(바깥 29 °C) 방들은 괜찮았습니다. 그런데 16~17일에는 203호만 28 °C 넘게 올라갑니다. 날씨 탓이 아닙니다.'>room_temperatures.png: 8 September was the hottest weekday (29 °C outside), yet every room coped. On 16–17 September, though, room 203 climbs past 28 °C. It is not the weather.</figcaption>
+        </figure>
+        <div class="callout tip">
+          <div class="ci">?</div>
+          <div><span class="ct i18n" data-ko='표를 보고 생각해 보기'>Look at the tables and think</span>
+            <ul>
+              <li class="i18n" data-ko='더운 방 상위 10개는 <strong>모두 남향, 모두 AHU-2</strong> 입니다. 우연일까요?'>The ten warmest rooms are <strong>all south-facing and all AHU-2</strong>. Coincidence?</li>
+              <li class="i18n" data-ko='CO2가 가장 높은 방은 105호 대학원생실입니다. 정말 공기가 나쁜 걸까요, 아니면 센서가 이상한 걸까요? 6단계에서 확인합니다.'>The stuffiest room is 105, a graduate student office. Is the air really bad there, or is something wrong with the sensor? We check in step 6.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s3"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 4 : COMPLAINTS -->
+    <section class="step" id="s4">
+      <div class="stepnum"><div class="dot"><span>4</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='민원에서 방 번호 찾기'>Find the room in each complaint</h2>
+        <p class="i18n" data-ko='민원은 자유로운 글입니다. 트윈에 올리려면 <strong>어느 방 이야기인지</strong> 알아야 합니다. 먼저 단순한 규칙으로 해 봅니다: &quot;203호&quot; 같은 번호를 찾고, 없으면 &quot;세미나실&quot; 처럼 하나뿐인 방 이름을 찾고, 그것도 없으면 &quot;3층&quot; 같은 층만 기록합니다.'>Complaints are free text. To put them on the twin we need to know <strong>which room</strong> each one is about. We start with simple rules: look for a number like "203호"; if there is none, look for a room name that exists only once, such as "세미나실"; failing that, keep just the floor, such as "3층".</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">complaints_rooms.py</span><button class="copy">copy</button></div>
+<pre><code>import re
+
+import pandas as pd
+
+rooms = pd.read_csv("data/rooms_ko.csv", dtype={"room": str})
+
+<span class="cmt"># Room names that point to exactly one room ("세미나실" -&gt; 006). "교수실" is used 20 times, so it is left out.</span>
+counts = rooms.name_ko.value_counts()
+UNIQUE_NAMES = {name: room for name, room in zip(rooms.name_ko, rooms.room) if counts[name] == 1}
+UNIQUE_NAMES.update({"로비": "117", "서버실": "007", "실험실 B3": "012"})
+FLOOR_WORDS = {"지하": "B1", "1층": "1F", "2층": "2F", "3층": "3F", "4층": "4F"}
+
+
+def locate(text):
+    """Find (room, floor) in a complaint. room is None when only the floor is known."""
+    m = re.search(r"(\d{3})호", text)  <span class="cmt"># "203호" -&gt; 203</span>
+    if m and m.group(1) in set(rooms.room):
+        room = m.group(1)
+    else:
+        room = next((r for name, r in UNIQUE_NAMES.items() if name in text), None)
+    if room:
+        return room, rooms.set_index("room").floor[room]
+    floor = next((fl for word, fl in FLOOR_WORDS.items() if word in text), None)
+    return None, floor
+
+
+if __name__ == "__main__":
+    tickets = pd.read_csv("data/complaints.csv", parse_dates=["received", "closed_at"])
+    tickets[["room", "floor"]] = tickets.text.apply(lambda t: pd.Series(locate(t)))
+    pd.set_option("display.width", 160)
+    print(tickets[["id", "received", "room", "floor", "status", "text"]].to_string(index=False))
+
+    print("\nNo room found:", tickets.room.isna().sum(), "of", len(tickets))
+    print("\nTickets per room:")
+    per_room = tickets.dropna(subset=["room"]).groupby("room").size().sort_values(ascending=False)
+    print(per_room.head(8).to_string())
+
+    <span class="cmt"># Which tickets were open at one moment? received &lt;= t and (not closed yet or closed after t)</span>
+    t = pd.Timestamp("2026-09-17 15:00")
+    open_now = tickets[(tickets.received &lt;= t) &amp; (tickets.closed_at.isna() | (tickets.closed_at &gt; t))]
+    print(f"\nOpen at {t}: {len(open_now)} tickets -&gt;", sorted(open_now.room.dropna()))
+    tickets.to_csv("complaints_located.csv", index=False)</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 결과 (뒷부분)'>run it · output (end)</span><button class="copy">copy</button></div>
+<pre><code><span class="pr">$ </span>uv run complaints_rooms.py
+  ...
+C036 2026-09-20 16:40:00  012    B1        open                              지하 실험실 B3 냉장고 알람이 울려요.
+
+No room found: 4 of 36
+
+Tickets per room:
+room
+006    6
+105    2
+203    2
+012    1
+007    1
+106    1
+112    1
+113    1
+
+Open at 2026-09-17 15:00:00: 15 tickets -&gt; ['006', '006', '006', '006', '105', '201', '203', '204', '206', '207', '302', '305', '306', '310']</code></pre>
+        </div>
+        <div class="callout warn">
+          <div class="ci">!</div>
+          <div><span class="ct i18n" data-ko='규칙의 한계'>Where rules break</span>
+            <p class="i18n" data-ko='C024 <em>&quot;세미나실은 괜찮은데 2층만 올라오면 너무 더워요&quot;</em> 는 2층 이야기인데, 규칙은 &quot;세미나실&quot; 을 보고 006호에 붙였습니다. 규칙은 <strong>단어</strong>만 보고 <strong>뜻</strong>은 보지 못합니다. 9주차의 LLM 분류기라면 이런 문장도 맞게 읽을 수 있습니다.'>C024, <em>"세미나실은 괜찮은데 2층만 올라오면 너무 더워요"</em> ("the seminar room is fine, but upstairs on 2F it's far too hot"), is about the second floor, yet the rule saw "세미나실" and assigned it to room 006. Rules see <strong>words</strong>, not <strong>meaning</strong>. The Week 9 LLM triage could read a sentence like this correctly.</p>
+          </div>
+        </div>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <ul>
+              <li class="i18n" data-ko='<code class="ic">complaints_located.csv</code> 를 열고 방을 못 찾은 4건을 읽어 보세요. 사람이라면 어느 방(또는 구역)으로 보낼까요?'>Open <code class="ic">complaints_located.csv</code> and read the 4 tickets with no room. Where would a person send them?</li>
+              <li class="i18n" data-ko='도전 (선택): 9주차 <code class="ic">triage.py</code> 의 pydantic 모델에 <code class="ic">room: str | None</code> 칸을 추가해 gemma3로 방 번호를 뽑아 보세요. C024를 맞히나요?'>Challenge (optional): add a <code class="ic">room: str | None</code> field to the pydantic model in Week 9's <code class="ic">triage.py</code> and let gemma3 extract the room. Does it get C024 right?</li>
+            </ul>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s4"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 5 : THE TWIN -->
+    <section class="step" id="s5">
+      <div class="stepnum"><div class="dot"><span>5</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='디지털 트윈 만들기'>Build the digital twin</h2>
+        <p class="i18n" data-ko='이제 모두 합칩니다. 2단계의 건물, 3단계의 센서, 4단계의 민원을 <strong>방 번호로 연결</strong>하고, 방 색깔로 값을 보여 줍니다. 시간 슬라이더를 움직이면 2주 동안의 건물 상태가 다시 재생됩니다.'>Now put it all together: the building from step 2, the sensors from step 3 and the complaints from step 4, <strong>joined on the room number</strong>, with each room coloured by its value. Move the time slider and the building replays its two weeks.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">twin_app.py</span><button class="copy">copy</button></div>
+<pre><code>import time
+
+import matplotlib
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import viser
+
+from complaints_rooms import locate
+from twin_geometry import load_building
+
+<span class="cmt"># ------------------------------------------------------------------ 1. load everything, join on room number</span>
+groups, room_geo, sensor_pos = load_building("data/building_twin.ifc")
+rooms = pd.read_csv("data/rooms_ko.csv", dtype={"room": str}).set_index("room")
+points = pd.read_csv("data/sensors.csv", dtype={"room": str})
+readings = pd.read_csv("data/readings.csv", parse_dates=["timestamp"])
+wide = readings.pivot(index="timestamp", columns="point_id", values="value")
+times = wide.index
+tickets = pd.read_csv("data/complaints.csv", parse_dates=["received", "closed_at"])
+weather = pd.read_csv("data/weather.csv", parse_dates=["timestamp"])
+tickets[["room", "floor"]] = tickets.text.apply(lambda t: pd.Series(locate(t)))
+
+<span class="cmt"># room -&gt; its point id for each quantity, e.g. point_of["203"]["temperature"] = "AHU2.R203.ZN-T"</span>
+point_of = {r: dict(zip(p.quantity, p.point_id))
+            for r, p in points[points.ifc_class == "IfcSensor"].groupby("room")}
+
+<span class="cmt"># what the colours mean: (quantity, low, high, matplotlib colour map, legend text)</span>
+LAYERS = {
+    "Temperature (°C)": ("temperature", 22, 29, "RdYlBu_r", "blue = 22 °C, red = 29 °C or more"),
+    "CO2 (ppm)": ("co2", 400, 1400, "YlOrRd", "yellow = 400 ppm, dark red = 1400 ppm or more"),
+    "Open tickets": ("tickets", 0, 3, "Purples", "white = none, light purple = 1, dark purple = 3 or more"),
+}
+NO_SENSOR, NO_DATA = (200, 200, 200), (70, 70, 70)
+
+
+def open_tickets(t):
+    return tickets[(tickets.received &lt;= t) &amp; (tickets.closed_at.isna() | (tickets.closed_at &gt; t))]
+
+
+def ticket_status(ticket, t):
+    if ticket.received &gt; t:
+        return "not yet"
+    return "open" if pd.isna(ticket.closed_at) or ticket.closed_at &gt; t else "closed"
+
+
+def room_value(room, layer, t):
+    qty = LAYERS[layer][0]
+    if qty == "tickets":
+        return float((open_tickets(t).room == room).sum())
+    pid = point_of.get(room, {}).get(qty)
+    if pid is None or rooms.use[room] in ("plant", "server"):
+        return None  <span class="cmt"># no such sensor, or not a room people work in</span>
+    return wide.at[t, pid]  <span class="cmt"># NaN when the sensor sent nothing</span>
+
+
+def colour_of(value, layer):
+    if value is None:
+        return NO_SENSOR
+    if np.isnan(value):
+        return NO_DATA
+    _, lo, hi, cmap, _ = LAYERS[layer]
+    x = np.clip((value - lo) / (hi - lo), 0, 1)
+    if cmap == "Purples":  <span class="cmt"># tickets: 0 stays white, 1 is already clearly purple</span>
+        x = 0.0 if value == 0 else 0.45 + 0.55 * x
+    r, g, b, _ = matplotlib.colormaps[cmap](x)
+    return int(r * 255), int(g * 255), int(b * 255)
+
+
+<span class="cmt"># ------------------------------------------------------------------ 2. the 3D scene</span>
+server = viser.ViserServer()
+server.scene.set_up_direction("+z")
+server.scene.configure_environment_map(environment_intensity=0.5)  <span class="cmt"># softer light, truer colours</span>
+server.gui.configure_theme(control_width="large")
+
+
+@server.on_client_connect
+def start_view(client):
+    client.camera.position = (40.0, -23.0, 25.0)
+    client.camera.look_at = (27.0, 8.0, 0.0)
+
+
+building = {key: server.scene.add_mesh_simple(f"/building/{key[0]}/{key[1]}", v, f, color=c,
+                                              opacity=o, flat_shading=True)
+            for key, (v, f, c, o) in groups.items()}
+room_mesh, room_label = {}, {}
+for room, g in room_geo.items():
+    v = g["vertices"].copy()
+    v[:, 2] = v[:, 2].clip(max=v[:, 2].min() + 2.5)
+    room_mesh[room] = server.scene.add_mesh_simple(f"/rooms/{room}", v, g["faces"], flat_shading=True)
+    room_label[room] = server.scene.add_label(f"/labels/{room}", room,
+                                              position=(*v[:, :2].mean(axis=0), v[:, 2].max() + 0.2))
+sensor_dots = server.scene.add_point_cloud("/sensors", np.array(list(sensor_pos.values()), np.float32),
+                                           colors=(20, 20, 20), point_size=0.12, visible=False)
+
+<span class="cmt"># ------------------------------------------------------------------ 3. the side panel</span>
+days = sorted({t.strftime("%Y-%m-%d %a") for t in times})
+with server.gui.add_folder("View"):
+    floor_pick = server.gui.add_dropdown("Floor", ("All", "B1", "1F", "2F", "3F"), initial_value="All")
+    layer_pick = server.gui.add_dropdown("Colour by", tuple(LAYERS), initial_value="Temperature (°C)")
+    zone_pick = server.gui.add_dropdown("AHU zone", ("-", "AHU-1", "AHU-2"), initial_value="-")
+    show_sensors = server.gui.add_checkbox("Show sensors", False)
+with server.gui.add_folder("Time"):
+    day_pick = server.gui.add_dropdown("Day", tuple(days), initial_value="2026-09-17 Thu")
+    hour_pick = server.gui.add_slider("Time of day", 0, 23.75, 0.25, initial_value=15.5)
+    play = server.gui.add_button("▶ Play / pause")
+    clock = server.gui.add_markdown("")
+legend = server.gui.add_markdown("")
+title = server.gui.add_markdown("**Click a room.**")
+ticket_box = server.gui.add_markdown("")
+chart = server.gui.add_plotly(go.Figure(), aspect=1.6, visible=False)
+state = {"room": None, "playing": False}
+
+
+def now():
+    t = pd.Timestamp(day_pick.value[:10]) + pd.Timedelta(hours=hour_pick.value)
+    return times[times.get_indexer([t], method="nearest")[0]]
+
+
+def refresh(_=None):
+    t, layer, fl, zone = now(), layer_pick.value, floor_pick.value, zone_pick.value
+    if state["room"] and fl != "All" and room_geo[state["room"]]["floor"] != fl:
+        state["room"] = None  <span class="cmt"># the selected room is not on this floor</span>
+    for (floor, group), h in building.items():
+        h.visible = fl != "All" and floor == fl
+    for room, h in room_mesh.items():
+        floor = room_geo[room]["floor"]
+        h.visible = (fl == "All" and floor != "4F") or floor == fl
+        room_label[room].visible = floor == fl or room == state["room"]
+        h.color = colour_of(room_value(room, layer, t), layer)
+        in_zone = zone == "-" or rooms.ahu[room] == zone
+        h.opacity = None if in_zone else 0.08  <span class="cmt"># None = solid</span>
+    sensor_dots.visible = show_sensors.value
+    clock.content = f"### {t:%Y-%m-%d %a %H:%M}"
+    legend.content = (f"**{layer}**: {LAYERS[layer][4]}  \n"
+                      f"light grey = not monitored · dark grey = no data")
+    if state["room"]:
+        show_room(state["room"])
+    elif zone != "-":
+        show_ahu(zone)
+    else:
+        title.content, ticket_box.content, chart.visible = "**Click a room.**", "", False
+
+
+def show_room(room):
+    t, r = now(), rooms.loc[room]
+    lines = [f"### {room}호 · {r.name_ko}",
+             f"{r.floor} · {r.area_m2} m² · facade {r.facade} · {r.ahu} · IFC *{r.name_ifc}*"]
+    for qty, label, unit in [("temperature", "temperature", " °C"), ("co2", "CO2", " ppm"),
+                             ("humidity", "humidity", " %"), ("occupancy", "people counted", "")]:
+        pid = point_of.get(room, {}).get(qty)
+        if pid:
+            lines.append(f"- {label}: **{wide.at[t, pid]:g}{unit}** `{pid}`")
+    title.content = "\n".join(lines)
+    fig = go.Figure()
+    pts = point_of.get(room, {})
+    if layer_pick.value.startswith("CO2") and "co2" in pts:
+        fig.add_scatter(x=times, y=wide[pts["co2"]], name=f"{room} CO2 (ppm)", line=dict(color="#e6550d"))
+        fig.add_hline(y=1000, line=dict(color="black", dash="dash", width=1))
+    elif "temperature" in pts:
+        fig.add_scatter(x=weather.timestamp, y=weather.temp_c, name="outdoor (°C)",
+                        line=dict(color="#aaaaaa", width=1))
+        fig.add_scatter(x=times, y=wide[pts["temperature"]], name=f"{room} (°C)", line=dict(color="#d62728"))
+    style_chart(fig, t)
+    mine = tickets[tickets.room == room]
+    ticket_box.content = "**Tickets**  \n" + ("\n".join(
+        f"- {x.received:%m-%d %H:%M} · *{ticket_status(x, t)}* · {x.text}" for x in mine.itertuples()) or "none")
+
+
+def show_ahu(ahu):
+    a = ahu.replace("-", "")
+    served = rooms[rooms.ahu == ahu]
+    title.content = (f"### {ahu} · 공조기\nServes {len(served)} rooms on "
+                     f"{', '.join(sorted(served.floor.unique()))}  \n"
+                     f"- supply air: **{wide.at[now(), a + '.SAT']:g} °C** (setpoint 14 °C)\n"
+                     f"- chilled-water valve: **{wide.at[now(), a + '.CHW-VLV']:g} %**")
+    fig = go.Figure()
+    fig.add_scatter(x=times, y=wide[a + ".SAT"], name="supply air °C", line=dict(color="#1f77b4"))
+    fig.add_scatter(x=times, y=wide[a + ".RAT"], name="return air °C", line=dict(color="#d62728"))
+    fig.add_scatter(x=times, y=wide[a + ".CHW-VLV"], name="valve (%)", yaxis="y2",
+                    line=dict(color="rgba(120,120,120,0.5)", width=1))
+    style_chart(fig, now())
+    ticket_box.content = ""
+
+
+def style_chart(fig, t):
+    fig.add_vline(x=t, line=dict(color="black", dash="dot"))
+    fig.update_layout(margin=dict(l=10, r=10, t=10, b=10), legend=dict(orientation="h", y=1.12),
+                      yaxis2=dict(overlaying="y", side="right", showgrid=False),
+                      xaxis=dict(tickformat="%d %b"))
+    chart.figure = fig
+    chart.visible = True
+
+
+def make_click(room):
+    def on_click(event):
+        state["room"] = room
+        refresh()
+    return on_click
+
+
+for room, h in room_mesh.items():
+    h.on_click(make_click(room))
+
+
+def zone_changed(_):
+    state["room"] = None
+    refresh()
+
+
+def toggle_play(_):
+    state["playing"] = not state["playing"]
+
+
+for control in (floor_pick, layer_pick, show_sensors, day_pick, hour_pick):
+    control.on_update(refresh)
+zone_pick.on_update(zone_changed)
+play.on_click(toggle_play)
+refresh()
+
+print("Digital twin running: open http://localhost:8080  (Ctrl+C to stop)")
+while True:
+    time.sleep(0.4)
+    if state["playing"]:  <span class="cmt"># one hour per tick; roll over to the next day</span>
+        h = hour_pick.value + 1
+        if h &gt; 23.75:
+            i = days.index(day_pick.value)
+            day_pick.value = days[(i + 1) % len(days)]
+            h = 0.0
+        hour_pick.value = h</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 후 브라우저에서 http://localhost:8080 열기'>run, then open http://localhost:8080 in your browser</span><button class="copy">copy</button></div>
+          <pre><code>uv run twin_app.py</code></pre>
+        </div>
+        <figure>
+          <img src="assets/week11_twin_overview.jpg" alt="The whole building as stacked coloured room blocks on Thursday 17 September at 15:30: the south side of the second and third floors is red, the basement and ground floor are blue" loading="lazy">
+          <figcaption class="i18n" data-ko='9월 17일(목) 15:30, 모든 층. 2층과 3층의 남쪽만 빨갛고, 지하와 1층은 파랗습니다. 한눈에 &quot;어디가&quot; 문제인지 보입니다.'>Thursday 17 September, 15:30, all floors. Only the south side of 2F and 3F is red; B1 and 1F are blue. At a glance you see <em>where</em> the problem is.</figcaption>
+        </figure>
+        <div class="tree">
+          <table>
+            <tr><td>Floor</td><td class="i18n" data-ko='All = 건물 전체 (방만), B1~3F = 그 층의 벽·문·창과 방 번호.'>All = the whole building (rooms only); B1–3F = that floor with its walls, doors, windows and room numbers.</td></tr>
+            <tr><td>Colour by</td><td class="i18n" data-ko='온도, CO2, 또는 그 시각에 열려 있던 민원 수.'>Temperature, CO2, or the number of tickets open at that moment.</td></tr>
+            <tr><td>AHU zone</td><td class="i18n" data-ko='한 공조기가 담당하는 방만 진하게 보이고, 그 공조기의 급기 온도와 밸브 그래프가 나옵니다.'>Shows only the rooms one AHU serves, plus that AHU's supply-air and valve chart.</td></tr>
+            <tr><td>Day · Time of day</td><td class="i18n" data-ko='보고 싶은 시각. <strong>▶ Play / pause</strong> 는 0.4초에 1시간씩 진행합니다.'>The moment to show. <strong>▶ Play / pause</strong> runs one hour every 0.4 seconds.</td></tr>
+            <tr><td><span class="i18n" data-ko='방 클릭'>click a room</span></td><td class="i18n" data-ko='그 시각의 센서 값, 그 방의 민원 목록, 2주 그래프 (점선 = 지금 시각).'>Its sensor values at that moment, its tickets, and a two-week chart (dotted line = the current time).</td></tr>
+          </table>
+        </div>
+        <div class="fig-pair">
+          <figure>
+            <img src="assets/week11_twin_303.jpg" alt="Third floor with room 303 selected: panel shows 28.6 °C, 890 ppm CO2, 4 people, and a chart where 303 follows the outdoor temperature only on 16 and 17 September" loading="lazy">
+            <figcaption class="i18n" data-ko='3층, 303호 클릭: 28.6 °C, 4명. 그래프에서 16~17일만 튀어 오릅니다.'>3F, room 303 clicked: 28.6 °C with 4 people. The chart jumps only on the 16th and 17th.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/week11_twin_tickets.jpg" alt="Second floor coloured by open tickets: rooms 201, 203, 204, 206, 207 and 212 are purple; room 203 selected with its two tickets listed" loading="lazy">
+            <figcaption class="i18n" data-ko='Colour by = Open tickets: 같은 시각, 민원이 열린 방이 보라색. 더운 방과 거의 겹칩니다.'>Colour by = Open tickets at the same moment: the rooms with open complaints are purple, and they almost match the hot rooms.</figcaption>
+          </figure>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='처음 화면이 위 그림과 같고(9월 17일 15:30), 방을 클릭하면 값·민원·그래프가 나옵니다. <strong>▶ Play</strong> 를 누르면 시계가 움직이며 방 색이 바뀝니다. 지하와 1층은 계속 파랗나요?'>The first view matches the picture above (17 September, 15:30), and clicking a room shows its values, tickets and chart. Press <strong>▶ Play</strong>: the clock runs and the rooms change colour. Do B1 and 1F stay blue?</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <div class="ci">!</div>
+          <div><span class="ct i18n" data-ko='느리거나 안 보일 때'>If it is slow or empty</span>
+            <p class="i18n" data-ko='시작할 때 IFC와 35만 줄을 읽느라 5~10초 걸립니다. 터미널에 <code class="ic">Digital twin running</code> 이 나온 뒤에 브라우저를 새로 고침하세요. 노트북이 느리면 <strong>Floor</strong> 를 한 층만 고르면 훨씬 가볍습니다.'>Start-up takes 5–10 seconds while it reads the IFC and 350,000 rows. Refresh the browser after the terminal prints <code class="ic">Digital twin running</code>. On a slow laptop, pick a single floor in <strong>Floor</strong>; it is much lighter.</p>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s5"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+    <!-- STEP 6 : INVESTIGATE -->
+    <section class="step" id="s6">
+      <div class="stepnum"><div class="dot"><span>6</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='조사: 9월 16~17일에 무슨 일이 있었나?'>Investigate: what happened on 16–17 September?</h2>
+        <p class="i18n" data-ko='시설팀처럼 생각해 봅시다. 트윈을 열어 두고 아래 순서대로 함께 따라갑니다.'>Think like the facility team. Keep the twin open and follow these steps together.</p>
+        <ol>
+          <li class="i18n" data-ko='<strong>어디가?</strong> Floor = All, 9월 17일 15:30. 빨간 방은 2층·3층 남쪽에 몰려 있습니다.'><strong>Where?</strong> Floor = All, 17 September 15:30. The red rooms are all on the south side of 2F and 3F.</li>
+          <li class="i18n" data-ko='<strong>언제부터?</strong> Day = 9월 16일, ▶ Play. 오후 1시쯤부터 빨개지기 시작합니다. 9월 8일(더 더운 날)도 재생해 비교해 보세요.'><strong>Since when?</strong> Day = 16 September, ▶ Play. The rooms start turning red around 13:00. Replay 8 September (a hotter day) to compare.</li>
+          <li class="i18n" data-ko='<strong>공통점은?</strong> AHU zone = AHU-2. 빨간 방은 모두 AHU-2 구역입니다. 패널의 그래프: 급기 온도가 설정값 14 °C 가 아니라 <strong>23 °C 넘게</strong> 나오고, 냉수 밸브는 <strong>100 %</strong> 열려 있습니다.'><strong>What do they share?</strong> AHU zone = AHU-2. Every red room is in the AHU-2 zone. The panel chart: supply air is <strong>above 23 °C</strong> instead of the 14 °C setpoint, while the chilled-water valve is <strong>100 %</strong> open.</li>
+          <li class="i18n" data-ko='<strong>결론:</strong> 밸브에 &quot;100 % 열어&quot; 라고 명령했는데도 공기가 차가워지지 않습니다. 밸브가 실제로는 <strong>거의 닫힌 채 고착</strong>된 것입니다. 9주차 매뉴얼의 알람 E01 (급기 온도 높음) 과 같은 상황입니다.'><strong>Conclusion:</strong> the controller commands the valve "100 % open", yet the air doesn't get colder. The valve is actually <strong>stuck nearly shut</strong>. This is alarm E01 (supply air temperature high) from the Week 9 manual.</li>
+        </ol>
+        <div class="fig-pair">
+          <figure>
+            <img src="assets/week11_twin_ahu2.jpg" alt="AHU-2 zone selected: rooms outside the zone are faded, the 2F and 3F south rooms are red, and the panel reports supply air 23.6 °C against a setpoint of 14 °C with the valve at 99 %" loading="lazy">
+            <figcaption class="i18n" data-ko='AHU zone = AHU-2: 급기 23.6 °C (설정 14 °C), 밸브 99 %.'>AHU zone = AHU-2: supply air 23.6 °C (setpoint 14 °C), valve 99 %.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/week11_twin_310.jpg" alt="Third floor with room 310 selected: it is blue among warm rooms, and its chart is a perfectly flat line at 23.5 °C from 10 September" loading="lazy">
+            <figcaption class="i18n" data-ko='310호는 더운 방들 사이에서 혼자 파랗습니다. 그래프: 9월 10일부터 23.5 °C 로 완전히 평평. 센서가 멈췄습니다. 민원 C026 도 확인하세요.'>Room 310 is blue among warm rooms. Its chart: a perfectly flat 23.5 °C since 10 September. The sensor is stuck. Read ticket C026 too.</figcaption>
+          </figure>
+        </div>
+        <p class="i18n" data-ko='트윈에서 눈으로 찾은 것을 <strong>규칙</strong>으로 만들면 매일 자동으로 검사할 수 있습니다. 실제 건물의 고장 진단(FDD) 소프트웨어도 이런 규칙을 수백 개 씁니다.'>Anything you find by eye in the twin can be turned into a <strong>rule</strong> and checked automatically every day. Real fault detection and diagnostics (FDD) software runs hundreds of rules like these.</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag">find_faults.py</span><button class="copy">copy</button></div>
+<pre><code>import numpy as np
+import pandas as pd
+
+from complaints_rooms import locate
+
+rooms = pd.read_csv("data/rooms_ko.csv", dtype={"room": str}).set_index("room")
+sensors = pd.read_csv("data/sensors.csv", dtype={"room": str})
+readings = pd.read_csv("data/readings.csv", parse_dates=["timestamp"])
+wide = readings.pivot(index="timestamp", columns="point_id", values="value")
+full = pd.date_range(wide.index.min(), wide.index.max(), freq="15min")
+wide = wide.reindex(full)  <span class="cmt"># missing readings become NaN</span>
+
+
+def periods(mask, min_steps=2):
+    """Turn a True/False series into (start, end) periods that last at least min_steps readings."""
+    out, start, n = [], None, 0
+    for t, on in mask.items():
+        if on:
+            start, n = (t if start is None else start), n + 1
+        else:
+            if start is not None and n &gt;= min_steps:
+                out.append((start, prev))
+            start, n = None, 0
+        prev = t
+    if start is not None and n &gt;= min_steps:
+        out.append((start, prev))
+    return out
+
+
+<span class="cmt"># 1. Rule-based fault detection on the AHUs:</span>
+<span class="cmt">#    fan on + valve almost fully open + supply air still warm = the coil is not cooling</span>
+print("1. AHU rule: fan on AND valve &gt;= 95 % AND supply air &gt; 18 °C for 30 min or more")
+for ahu in ["AHU1", "AHU2"]:
+    rule = (wide[f"{ahu}.SF-STS"] == 1) &amp; (wide[f"{ahu}.CHW-VLV"] &gt;= 95) &amp; (wide[f"{ahu}.SAT"] &gt; 18)
+    found = periods(rule, min_steps=2)
+    print(f"   {ahu}: {len(found)} periods", *[f"\n     {a:%a %d %H:%M} -&gt; {b:%a %d %H:%M}" for a, b in found])
+
+<span class="cmt"># 2. Stuck sensors: a temperature that does not change at all for 12 hours or more</span>
+print("\n2. Stuck sensors (same temperature for 12 h or more)")
+for pid in [c for c in wide if c.endswith("ZN-T")]:
+    same = wide[pid].ffill().diff().abs() &lt; 1e-9  <span class="cmt"># ffill: a gap in the data is not a change</span>
+    longest = max(periods(same, 1), key=lambda p: p[1] - p[0], default=None)
+    if longest and longest[1] - longest[0] &gt;= pd.Timedelta(hours=12):
+        print(f"   {pid}: {wide[pid][longest[0]]} °C from {longest[0]:%a %d %H:%M} to {longest[1]:%a %d %H:%M}")
+
+<span class="cmt"># 3. Gaps: when did many sensors go silent at the same time?</span>
+print("\n3. Data gaps (time steps where more than 20 points sent nothing)")
+missing = wide.isna().sum(axis=1)
+for a, b in periods(missing &gt; 20, 1):
+    silent = wide.loc[a].index[wide.loc[a].isna()]
+    rooms_silent = sorted({p.split(".")[1][1:] for p in silent if ".R" in p})
+    print(f"   {a:%a %d %H:%M} -&gt; {b:%H:%M}: {missing[a]} points, rooms {rooms_silent[0]}…{rooms_silent[-1]}")
+
+<span class="cmt"># 4. Drift: at night (03-05 h) every room is empty, so CO2 should fall back to outdoor air (~420 ppm)</span>
+print("\n4. CO2 drift (night-time minimum rising by more than 8 ppm per day)")
+night = wide[(wide.index.hour &gt;= 3) &amp; (wide.index.hour &lt; 5)]
+for pid in [c for c in wide if c.endswith("ZN-CO2")]:
+    daily_min = night[pid].resample("D").min().dropna()
+    slope = np.polyfit(np.arange(len(daily_min)), daily_min.to_numpy(), 1)[0]
+    if slope &gt; 8:
+        print(f"   {pid}: +{slope:.0f} ppm/day, night minimum {daily_min.iloc[0]:.0f} -&gt; {daily_min.iloc[-1]:.0f} ppm")
+
+<span class="cmt"># 5. Do the complaints agree? Tickets received while the AHU-2 rule was firing (+ 1 day after)</span>
+tickets = pd.read_csv("data/complaints.csv", parse_dates=["received", "closed_at"])
+tickets[["room", "floor"]] = tickets.text.apply(lambda t: pd.Series(locate(t)))
+rule2 = periods((wide["AHU2.SF-STS"] == 1) &amp; (wide["AHU2.CHW-VLV"] &gt;= 95) &amp; (wide["AHU2.SAT"] &gt; 18), 2)
+start, end = rule2[0][0], rule2[-1][1] + pd.Timedelta(days=1)
+during = tickets[(tickets.received &gt;= start) &amp; (tickets.received &lt;= end)]
+in_zone = during.room.map(lambda r: rooms.ahu.get(r, "?") if isinstance(r, str) else "?")
+print(f"\n5. {len(during)} tickets between {start:%a %d %H:%M} and {end:%a %d %H:%M}; "
+      f"AHU of their rooms: {in_zone.value_counts().to_dict()}")</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 결과'>run it · output</span><button class="copy">copy</button></div>
+<pre><code><span class="pr">$ </span>uv run find_faults.py
+1. AHU rule: fan on AND valve &gt;= 95 % AND supply air &gt; 18 °C for 30 min or more
+   AHU1: 0 periods
+   AHU2: 3 periods 
+     Wed 16 13:15 -&gt; Wed 16 20:45 
+     Thu 17 07:00 -&gt; Thu 17 20:45 
+     Fri 18 07:00 -&gt; Fri 18 10:30
+
+2. Stuck sensors (same temperature for 12 h or more)
+   AHU2.R310.ZN-T: 23.5 °C from Thu 10 09:30 to Sun 20 23:45
+
+3. Data gaps (time steps where more than 20 points sent nothing)
+   Mon 14 10:00 -&gt; 14:15: 75 points, rooms 301…322
+
+4. CO2 drift (night-time minimum rising by more than 8 ppm per day)
+   AHU1.R105.ZN-CO2: +21 ppm/day, night minimum 395 -&gt; 670 ppm
+
+5. 18 tickets between Wed 16 13:15 and Sat 19 10:30; AHU of their rooms: {'AHU-2': 14, 'AHU-1': 3, '?': 1}</code></pre>
+        </div>
+        <div class="tree">
+          <table>
+            <tr><td>1 · AHU-2</td><td class="i18n" data-ko='냉수 밸브 고착. 16일 13:15 ~ 18일 10:30 (수리). 2·3층 남향 방이 과열되고 민원이 몰렸습니다.'>Chilled-water valve stuck, Wed 16 13:15 until the repair on Fri 18 10:30. The south rooms on 2F/3F overheated and the complaints piled up.</td></tr>
+            <tr><td>2 · 310</td><td class="i18n" data-ko='온도 센서가 23.5 °C 에서 멈춤. 방은 더운데 BMS는 &quot;정상&quot; 으로 봅니다. 가장 위험한 고장은 <strong>조용한</strong> 고장입니다.'>Temperature sensor stuck at 23.5 °C. The room is hot, but the BMS thinks it is fine. The most dangerous faults are the <strong>quiet</strong> ones.</td></tr>
+            <tr><td>3 · 3F</td><td class="i18n" data-ko='14일 10:00~14:15 3층 전체가 데이터 없음. 네트워크 장애 (민원 C011 &quot;인터넷이 끊겼어요&quot;). 트윈에서 짙은 회색으로 보입니다.'>No data from all of 3F on Mon 14, 10:00–14:15: a network outage (ticket C011, "the internet was down"). It shows dark grey in the twin.</td></tr>
+            <tr><td>4 · 105</td><td class="i18n" data-ko='CO2 센서가 하루 약 20 ppm씩 올라감 (드리프트). 3단계에서 &quot;가장 답답한 방&quot; 이었던 105호는 사실 <strong>센서 문제</strong>였습니다. 교정이 필요합니다.'>CO2 sensor drifting up about 20 ppm a day. Room 105, the "stuffiest room" in step 3, is really a <strong>sensor problem</strong>. It needs recalibration.</td></tr>
+            <tr><td>+ · 006</td><td class="i18n" data-ko='세미나실은 화·목 대형 강의(약 55명)에 CO2 1500 ppm. 환기 설계가 30명 기준입니다. 고장이 아니라 <strong>설계/운영</strong> 문제입니다. Colour by = CO2 로 9월 15일 14:30 을 보세요.'>The seminar room hits 1500 ppm CO2 during the big Tue/Thu lecture (about 55 people), but its ventilation was designed for 30. This is not a fault; it is a <strong>design/operation</strong> problem. See it with Colour by = CO2 on 15 September at 14:30.</td></tr>
+          </table>
+        </div>
+        <figure>
+          <img src="assets/week11_twin_co2.jpg" alt="Basement coloured by CO2 on Tuesday 15 September at 14:30: the large seminar room 006 is dark red at 1505 ppm with 54 people, and its panel lists six tickets" loading="lazy">
+          <figcaption class="i18n" data-ko='9월 15일(화) 14:30, 지하, Colour by = CO2: 세미나실 1505 ppm, 54명. 민원 목록에 &quot;답답하다&quot; 는 글이 반복됩니다.'>Tuesday 15 September 14:30, B1, Colour by = CO2: the seminar room at 1505 ppm with 54 people. Its tickets keep saying "stuffy".</figcaption>
+        </figure>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='오늘의 핵심'>The point of today</span>
+            <p class="i18n" data-ko='데이터 하나만 보면 놓치는 것을 트윈은 보여 줍니다. 민원만 보면 &quot;여기저기 덥다&quot;, 센서만 보면 &quot;숫자가 많다&quot;, BIM만 보면 &quot;방이 82개&quot; 입니다. <strong>방 번호와 공조 구역으로 연결하는 순간</strong> &quot;AHU-2의 밸브&quot; 라는 원인 하나가 보입니다. 디지털 트윈은 멋진 3D가 아니라 <strong>연결된 데이터</strong>입니다.'>The twin shows what any single source misses. The complaints alone say "it's hot here and there"; the sensors alone are "lots of numbers"; the BIM alone is "82 rooms". <strong>The moment you join them on room number and AHU zone</strong>, one cause appears: AHU-2's valve. A digital twin is not a pretty 3D model; it is <strong>joined-up data</strong>.</p>
+          </div>
+        </div>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
+            <ul>
+              <li class="i18n" data-ko='<code class="ic">find_faults.py</code> 에 규칙을 하나 더 만들어 보세요: &quot;근무 시간에 사람이 0명인데 냉방 중인 방&quot; (에너지 낭비).'>Add a rule to <code class="ic">find_faults.py</code>: "a room being cooled during working hours with nobody in it" (wasted energy).</li>
+              <li class="i18n" data-ko='트윈 패널에 <strong>Humidity</strong> 레이어를 추가해 보세요 (<code class="ic">LAYERS</code> 에 한 줄). 고장 중에 습도는 어떻게 변하나요?'>Add a <strong>Humidity</strong> layer to the twin (one line in <code class="ic">LAYERS</code>). What happens to humidity during the fault?</li>
+              <li class="i18n" data-ko='도전 (선택): 9주차의 에이전트에 <code class="ic">get_room_status(room)</code> 도구를 주고 &quot;203호 민원이 왜 많아?&quot; 라고 물어보세요.'>Challenge (optional): give the Week 9 agent a <code class="ic">get_room_status(room)</code> tool and ask it "why are there so many complaints from 203?"</li>
+            </ul>
+          </div>
+        </div>
+        <div class="done-row"><button class="done-btn" data-done="s6"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- CHEAT SHEET -->
+  <section class="cheat">
+    <h2 class="i18n" data-ko='한 화면 요약 (치트 시트)'>One-screen cheat sheet</h2>
+    <p class="i18n" data-ko='위 내용을 순서대로 정리했습니다 — 흐름을 익힌 뒤 참고용으로 쓰세요.'>Everything above, in order — for reference once you know the flow.</p>
+    <div class="code">
+      <div class="code-head"><span class="code-tag" id="cheatTag">Windows · cmd</span><button class="copy">copy</button></div>
+      <pre><code id="cheatCode"></code></pre>
+    </div>
+  </section>
+
+  <footer>
+    <span class="i18n" data-ko='스마트 시설 관리 · 11주차 실습 · 건물 모델: KIT AC20-Institute-Var-2 (센서·공조기 추가) · 날씨: Open-Meteo · 센서 값과 민원은 교육용 가상 데이터'>Smart Facility Management · Week 11 practical · building model: KIT AC20-Institute-Var-2 (sensors and AHUs added) · weather: Open-Meteo · sensor readings and complaints are synthetic teaching data</span>
+    <a href="https://docs.ifcopenshell.org" target="_blank" rel="noopener" class="i18n" data-ko='IfcOpenShell 문서'>IfcOpenShell docs</a> ·
+    <a href="https://viser.studio" target="_blank" rel="noopener" class="i18n" data-ko='viser 문서'>viser docs</a> ·
+    <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> ·
+    <a href="week09.html" class="i18n" data-ko='9주차 LLM'>Week 9 LLMs</a> ·
+    <a href="setup.html" class="i18n" data-ko='2주차 설치 가이드'>Week 2 setup guide</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var KEY_OS="setup.os", KEY_DONE="week11.done", KEY_THEME="setup.theme", KEY_LANG="setup.lang";
+  var lang="en";
+
+  /* ---- language strings driven by JS ---- */
+  var STR={
+    copy:      { en:"copy",           ko:"복사" },
+    copied:    { en:"copied ✓",       ko:"복사됨 ✓" },
+    markDone:  { en:" Mark step done", ko:" 완료 표시" },
+    stepDone:  { en:" Step complete",  ko:" 완료됨" },
+    langBtn:   { en:"한국어",          ko:"EN" }
+  };
+  var CHEAT_CMT={
+    en:["# 0 · new project and data",
+        "# 1 · open the BIM model",
+        "# 2 · see the building in 3D -> http://localhost:8080 (Ctrl+C to stop)",
+        "# 3 · sensor data and comfort",
+        "# 4 · find the room in each complaint",
+        "# 5 · the digital twin -> http://localhost:8080",
+        "# 6 · automatic fault checks"],
+    ko:["# 0 · 새 프로젝트와 데이터",
+        "# 1 · BIM 모델 열어 보기",
+        "# 2 · 건물을 3D로 보기 -> http://localhost:8080 (끝낼 때 Ctrl+C)",
+        "# 3 · 센서 데이터와 쾌적성",
+        "# 4 · 민원에서 방 번호 찾기",
+        "# 5 · 디지털 트윈 -> http://localhost:8080",
+        "# 6 · 자동 고장 검사"]
+  };
+
+  /* ---- i18n: capture English HTML, swap on demand ---- */
+  var i18nEls=document.querySelectorAll(".i18n");
+  i18nEls.forEach(function(el){ el._en=el.innerHTML; });
+  function applyLang(l){
+    lang=(l==="ko")?"ko":"en";
+    document.documentElement.setAttribute("lang",lang);
+    i18nEls.forEach(function(el){
+      var ko=el.getAttribute("data-ko");
+      el.innerHTML=(lang==="ko"&&ko!=null)?ko:el._en;
+    });
+    document.querySelectorAll(".copy").forEach(function(b){
+      if(!b.classList.contains("copied")) b.textContent=STR.copy[lang];
+    });
+    document.getElementById("langBtn").textContent=STR.langBtn[lang];
+    renderCheat(currentOS);
+    refresh();
+    try{ localStorage.setItem(KEY_LANG, lang); }catch(e){}
+  }
+
+  /* ---- OS switching ---- */
+  var currentOS="win-cmd";
+  var buttons=document.querySelectorAll(".seg button");
+  function applyOS(os){
+    currentOS=os;
+    document.querySelectorAll("[data-os]").forEach(function(el){
+      var list=el.getAttribute("data-os").split(/\s+/);
+      el.classList.toggle("os-on", list.indexOf(os)!==-1);
+    });
+    buttons.forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.set===os?"true":"false"); });
+    renderCheat(os);
+    try{ localStorage.setItem(KEY_OS, os); }catch(e){}
+  }
+  buttons.forEach(function(b){ b.addEventListener("click", function(){ applyOS(b.dataset.set); }); });
+
+  /* ---- cheat sheet (per-OS, per-lang) ---- */
+  function cheatFor(os){
+    var curl = os==="win-ps" ? "curl.exe" : "curl";
+    var unzip = (os==="mac"||os==="linux") ? "unzip" : "tar -xf";
+    var c=CHEAT_CMT[lang], L=[];
+    function cm(i){ L.push("<span class='cmt'>"+c[i]+"</span>"); }
+    cm(0);
+    L.push("uv init --python 3.12 --no-package facility-twin");
+    L.push("cd facility-twin");
+    L.push("uv add ifcopenshell viser pandas numpy plotly matplotlib");
+    L.push(curl+" -L -o week11_data.zip https://mugojames254.github.io/smart_facility_coursework/week11_data.zip");
+    L.push(unzip+" week11_data.zip");
+    cm(1); L.push("uv run explore_ifc.py");
+    cm(2); L.push("uv run twin_geometry.py"); L.push("uv run view_building.py");
+    cm(3); L.push("uv run sensor_data.py");
+    cm(4); L.push("uv run complaints_rooms.py");
+    cm(5); L.push("uv run twin_app.py");
+    cm(6); L.push("uv run find_faults.py");
+    return L.join("\n");
+  }
+  var tagText={ "win-cmd":"Windows · cmd","win-ps":"Windows · PowerShell","mac":"macOS","linux":"Linux" };
+  function renderCheat(os){
+    document.getElementById("cheatCode").innerHTML=cheatFor(os);
+    document.getElementById("cheatTag").textContent=tagText[os];
+  }
+
+  /* ---- copy buttons ---- */
+  document.addEventListener("click", function(e){
+    var btn=e.target.closest(".copy"); if(!btn) return;
+    var code=btn.closest(".code").querySelector("pre code");
+    var text=code.innerText;
+    function ok(){ btn.classList.add("copied"); var o=STR.copy[lang]; btn.textContent=STR.copied[lang];
+      setTimeout(function(){ btn.classList.remove("copied"); btn.textContent=o; },1400); }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(ok,ok); }
+    else { try{ var t=document.createElement("textarea"); t.value=text; document.body.appendChild(t);
+      t.select(); document.execCommand("copy"); document.body.removeChild(t); ok(); }catch(e){} }
+  });
+
+  /* ---- done tracking + progress ---- */
+  var steps=["s0","s1","s2","s3","s4","s5","s6"], done={};
+  try{ done=JSON.parse(localStorage.getItem(KEY_DONE))||{}; }catch(e){ done={}; }
+  function saveDone(){ try{ localStorage.setItem(KEY_DONE, JSON.stringify(done)); }catch(e){} }
+  function refresh(){
+    var n=0;
+    steps.forEach(function(id){
+      var el=document.getElementById(id);
+      if(done[id]){ el.classList.add("done"); n++; } else { el.classList.remove("done"); }
+      var b=el.querySelector(".done-btn .box");
+      if(b) b.textContent = done[id] ? "✓" : "";
+      var lbl=el.querySelector(".done-btn .done-label");
+      if(lbl) lbl.textContent = done[id] ? STR.stepDone[lang] : STR.markDone[lang];
+    });
+    document.getElementById("pfill").style.width=(n/steps.length*100)+"%";
+  }
+  document.querySelectorAll(".done-btn").forEach(function(b){
+    b.addEventListener("click", function(){ var id=b.dataset.done; done[id]=!done[id]; saveDone(); refresh(); });
+  });
+
+  /* ---- theme toggle ---- */
+  var root=document.documentElement, tb=document.getElementById("themeBtn");
+  try{ var st=localStorage.getItem(KEY_THEME); if(st) root.setAttribute("data-theme",st); }catch(e){}
+  tb.addEventListener("click", function(){
+    var cur=root.getAttribute("data-theme");
+    var mqDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
+    var next = cur ? (cur==="dark"?"light":"dark") : (mqDark?"light":"dark");
+    root.setAttribute("data-theme",next);
+    try{ localStorage.setItem(KEY_THEME,next); }catch(e){}
+  });
+
+  /* ---- language toggle ---- */
+  document.getElementById("langBtn").addEventListener("click", function(){
+    applyLang(lang==="ko"?"en":"ko");
+  });
+
+  /* ---- init ---- */
+  var savedOS="win-cmd";
+  try{ savedOS=localStorage.getItem(KEY_OS)||"win-cmd"; }catch(e){}
+  var savedLang="en";
+  try{ savedLang=localStorage.getItem(KEY_LANG)||"en"; }catch(e){}
+  applyOS(savedOS);
+  applyLang(savedLang);
+})();
+</script>
+</body>
+</html>
