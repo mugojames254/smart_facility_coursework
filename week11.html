@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Facility Digital Twin</title>
-<meta name="description" content="Week 11 practical: open a real BIM model (IFC) with ifcopenshell, join 253 room sensors, two weeks of BMS data and Korean complaints on the room number, build a clickable 3D digital twin with viser, and use it to find a stuck AHU valve.">
+<meta name="description" content="Week 11 practical: open a real BIM model (IFC) with ifcopenshell, join 253 room sensors, two weeks of BMS data and Korean complaints on the room number, build a clickable 3D digital twin with viser, and ask it questions with a local LLM.">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap');
 
@@ -251,12 +251,12 @@
     </nav>
     <p class="eyebrow i18n" data-ko='스마트 시설 관리 - 실습 세션 · 11주차'>Smart Facility Management - Practical Session · Week 11 . (For any queries please feel free to reachout: mugojames254@skku.edu)</p>
     <h1 class="i18n" data-ko='디지털 트윈: BIM, 센서, 민원을 한 화면에'>Digital Twin: BIM, sensors and complaints in one view</h1>
-    <p class="lede i18n" data-ko='지금까지 건물을 <strong>스캔</strong>하고 (4·5주차), 민원을 <strong>읽었습니다</strong> (9주차). 오늘은 건물이 <strong>스스로 측정한 값</strong>까지 더해 하나로 묶습니다. 실제 연구동의 <strong>BIM 모델 (IFC)</strong> 에 센서 253개, 2주간의 BMS 데이터, 민원 36건을 <strong>방 번호 하나로 연결</strong>하고, 방을 클릭하면 모든 것이 보이는 3D 디지털 트윈을 만듭니다. 그리고 그 트윈으로 9월 16일에 무슨 일이 있었는지 직접 찾아냅니다.'>So far we have <strong>scanned</strong> a building (Weeks 4–5) and <strong>read</strong> its complaints (Week 9). Today we add what the building <strong>measures about itself</strong> and put everything together. We take a real research institute's <strong>BIM model (IFC)</strong>, 253 room sensors, two weeks of BMS data and 36 complaints, <strong>join them on one key — the room number</strong>, and build a 3D digital twin where clicking a room shows everything about it. Then we use the twin to find out what went wrong on 16 September.</p>
+    <p class="lede i18n" data-ko='지금까지 건물을 <strong>스캔</strong>하고 (4·5주차), 민원을 <strong>읽었습니다</strong> (9주차). 오늘은 건물이 <strong>스스로 측정한 값</strong>까지 더해 하나로 묶습니다. 실제 연구동의 <strong>BIM 모델 (IFC)</strong> 에 센서 253개, 2주간의 BMS 데이터, 민원 36건을 <strong>방 번호 하나로 연결</strong>하고, 방을 클릭하면 모든 것이 보이는 3D 디지털 트윈을 만듭니다.'>So far we have <strong>scanned</strong> a building (Weeks 4–5) and <strong>read</strong> its complaints (Week 9). Today we add what the building <strong>measures about itself</strong> and put everything together. We take a real research institute's <strong>BIM model (IFC)</strong>, 253 room sensors, two weeks of BMS data and 36 complaints, <strong>join them on one key — the room number</strong>, and build a 3D digital twin where clicking a room shows everything about it.</p>
     <div class="meta">
       <span class="i18n" data-ko='<b>프로젝트</b> facility-twin (새 프로젝트)'><b>Project</b> facility-twin (new)</span>
       <span class="i18n" data-ko='<b>라이브러리</b> ifcopenshell · viser · pandas · plotly'><b>Libraries</b> ifcopenshell · viser · pandas · plotly</span>
       <span class="i18n" data-ko='<b>데이터</b> IFC 모델 · BMS 센서 2주 · 민원 36건 (교육용 가상 데이터)'><b>Data</b> IFC model · 2 weeks of BMS data · 36 complaints (synthetic teaching data)</span>
-      <span class="i18n" data-ko='<b>새 개념</b> BIM/IFC · 디지털 트윈 · BMS 포인트 · 고장 진단'><b>New ideas</b> BIM/IFC · digital twin · BMS points · fault detection</span>
+      <span class="i18n" data-ko='<b>새 개념</b> BIM/IFC · 디지털 트윈 · BMS 포인트 · LLM 도우미'><b>New ideas</b> BIM/IFC · digital twin · BMS points · LLM assistant</span>
     </div>
     <div class="btn-row">
       <a class="slides-btn" href="week11_data.zip" download>
@@ -644,10 +644,6 @@ while True:
           <div class="code-head"><span class="code-tag i18n" data-ko='실행 후 브라우저에서 http://localhost:8080 열기'>run, then open http://localhost:8080 in your browser</span><button class="copy">copy</button></div>
           <pre><code>uv run view_building.py</code></pre>
         </div>
-        <figure>
-          <img src="assets/week11_building.jpg" alt="The second floor of the institute in a browser: walls, doors, windows and stairs, with room 207 highlighted in orange and the side panel showing 207호 연구소장실, IFC name Buero IL, 37.8 m², facade S, AHU-2" loading="lazy">
-          <figcaption class="i18n" data-ko='2층을 위에서 본 모습. 207호를 클릭하면 IFC 이름(Buero IL)과 우리 표의 한국어 이름(연구소장실)이 함께 나옵니다.'>The second floor from above. Clicking room 207 shows its IFC name (Buero IL) next to the Korean name from our own table (연구소장실).</figcaption>
-        </figure>
         <div class="callout verify">
           <div class="ci">✓</div>
           <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
@@ -748,16 +744,12 @@ room  hours_over_26C  hours_over_1000ppm  max_temp  max_co2 name_ko floor facade
  001             0.0                3.25      26.0   1200.0   회의실 1    B1      S AHU-1
  010             0.0                0.00      25.4    715.0  실험실 B1    B1      N AHU-1</code></pre>
         </div>
-        <figure>
-          <img src="assets/week11_room_temperatures.jpg" alt="Line chart of outdoor temperature and three rooms over two weeks: all rooms stay between 22 and 26 °C until 16 September, then room 203 rises to 28 °C on 16 and 17 September while room 210 and room 102 stay normal" loading="lazy">
-          <figcaption class="i18n" data-ko='room_temperatures.png: 9월 8일이 가장 더웠지만(바깥 29 °C) 방들은 괜찮았습니다. 그런데 16~17일에는 203호만 28 °C 넘게 올라갑니다. 날씨 탓이 아닙니다.'>room_temperatures.png: 8 September was the hottest weekday (29 °C outside), yet every room coped. On 16–17 September, though, room 203 climbs past 28 °C. It is not the weather.</figcaption>
-        </figure>
         <div class="callout tip">
           <div class="ci">?</div>
           <div><span class="ct i18n" data-ko='표를 보고 생각해 보기'>Look at the tables and think</span>
             <ul>
               <li class="i18n" data-ko='더운 방 상위 10개는 <strong>모두 남향, 모두 AHU-2</strong> 입니다. 우연일까요?'>The ten warmest rooms are <strong>all south-facing and all AHU-2</strong>. Coincidence?</li>
-              <li class="i18n" data-ko='CO2가 가장 높은 방은 105호 대학원생실입니다. 정말 공기가 나쁜 걸까요, 아니면 센서가 이상한 걸까요? 6단계에서 확인합니다.'>The stuffiest room is 105, a graduate student office. Is the air really bad there, or is something wrong with the sensor? We check in step 6.</li>
+              <li class="i18n" data-ko='CO2가 가장 높은 방은 105호 대학원생실입니다. 정말 공기가 나쁜 걸까요, 아니면 센서가 이상한 걸까요?'>The stuffiest room is 105, a graduate student office. Is the air really bad there, or is something wrong with the sensor?</li>
             </ul>
           </div>
         </div>
@@ -1098,10 +1090,6 @@ while True:
           <div class="code-head"><span class="code-tag i18n" data-ko='실행 후 브라우저에서 http://localhost:8080 열기'>run, then open http://localhost:8080 in your browser</span><button class="copy">copy</button></div>
           <pre><code>uv run twin_app.py</code></pre>
         </div>
-        <figure>
-          <img src="assets/week11_twin_overview.jpg" alt="The whole building as stacked coloured room blocks on Thursday 17 September at 15:30: the south side of the second and third floors is red, the basement and ground floor are blue" loading="lazy">
-          <figcaption class="i18n" data-ko='9월 17일(목) 15:30, 모든 층. 2층과 3층의 남쪽만 빨갛고, 지하와 1층은 파랗습니다. 한눈에 &quot;어디가&quot; 문제인지 보입니다.'>Thursday 17 September, 15:30, all floors. Only the south side of 2F and 3F is red; B1 and 1F are blue. At a glance you see <em>where</em> the problem is.</figcaption>
-        </figure>
         <div class="tree">
           <table>
             <tr><td>Floor</td><td class="i18n" data-ko='All = 건물 전체 (방만), B1~3F = 그 층의 벽·문·창과 방 번호.'>All = the whole building (rooms only); B1–3F = that floor with its walls, doors, windows and room numbers.</td></tr>
@@ -1111,20 +1099,10 @@ while True:
             <tr><td><span class="i18n" data-ko='방 클릭'>click a room</span></td><td class="i18n" data-ko='그 시각의 센서 값, 그 방의 민원 목록, 2주 그래프 (점선 = 지금 시각).'>Its sensor values at that moment, its tickets, and a two-week chart (dotted line = the current time).</td></tr>
           </table>
         </div>
-        <div class="fig-pair">
-          <figure>
-            <img src="assets/week11_twin_303.jpg" alt="Third floor with room 303 selected: panel shows 28.6 °C, 890 ppm CO2, 4 people, and a chart where 303 follows the outdoor temperature only on 16 and 17 September" loading="lazy">
-            <figcaption class="i18n" data-ko='3층, 303호 클릭: 28.6 °C, 4명. 그래프에서 16~17일만 튀어 오릅니다.'>3F, room 303 clicked: 28.6 °C with 4 people. The chart jumps only on the 16th and 17th.</figcaption>
-          </figure>
-          <figure>
-            <img src="assets/week11_twin_tickets.jpg" alt="Second floor coloured by open tickets: rooms 201, 203, 204, 206, 207 and 212 are purple; room 203 selected with its two tickets listed" loading="lazy">
-            <figcaption class="i18n" data-ko='Colour by = Open tickets: 같은 시각, 민원이 열린 방이 보라색. 더운 방과 거의 겹칩니다.'>Colour by = Open tickets at the same moment: the rooms with open complaints are purple, and they almost match the hot rooms.</figcaption>
-          </figure>
-        </div>
         <div class="callout verify">
           <div class="ci">✓</div>
           <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
-            <p class="i18n" data-ko='처음 화면이 위 그림과 같고(9월 17일 15:30), 방을 클릭하면 값·민원·그래프가 나옵니다. <strong>▶ Play</strong> 를 누르면 시계가 움직이며 방 색이 바뀝니다. 지하와 1층은 계속 파랗나요?'>The first view matches the picture above (17 September, 15:30), and clicking a room shows its values, tickets and chart. Press <strong>▶ Play</strong>: the clock runs and the rooms change colour. Do B1 and 1F stay blue?</p>
+            <p class="i18n" data-ko='처음 화면은 9월 17일 15:30 이고, 방을 클릭하면 값·민원·그래프가 나옵니다. <strong>▶ Play</strong> 를 누르면 시계가 움직이며 방 색이 바뀝니다. 지하와 1층은 계속 파랗나요?'>The first view shows 17 September, 15:30, and clicking a room shows its values, tickets and chart. Press <strong>▶ Play</strong>: the clock runs and the rooms change colour. Do B1 and 1F stay blue?</p>
           </div>
         </div>
         <div class="callout warn">
@@ -1134,151 +1112,6 @@ while True:
           </div>
         </div>
         <div class="done-row"><button class="done-btn" data-done="s5"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
-      </div>
-    </section>
-
-    <!-- STEP 6 : FAULT CHECKS -->
-    <section class="step" id="s6">
-      <div class="stepnum"><div class="dot"><span>6</span></div></div>
-      <div class="step-body">
-        <h2 class="i18n" data-ko='고장 자동으로 찾기'>Find the faults automatically</h2>
-        <p class="i18n" data-ko='트윈으로 9월 16~17일과 310호를 둘러본 뒤 (AHU zone = AHU-2 도 골라 보세요), 눈으로 본 것을 규칙으로 바꿉니다.'>Look around 16–17 September and room 310 in the twin (try AHU zone = AHU-2), then turn what you see into rules.</p>
-        <div class="fig-pair">
-          <figure>
-            <img src="assets/week11_twin_ahu2.jpg" alt="AHU-2 zone selected: rooms outside the zone are faded, the 2F and 3F south rooms are red, and the panel reports supply air 23.6 °C against a setpoint of 14 °C with the valve at 99 %" loading="lazy">
-            <figcaption class="i18n" data-ko='AHU zone = AHU-2: 급기 23.6 °C (설정 14 °C), 밸브 99 %.'>AHU zone = AHU-2: supply air 23.6 °C (setpoint 14 °C), valve 99 %.</figcaption>
-          </figure>
-          <figure>
-            <img src="assets/week11_twin_310.jpg" alt="Third floor with room 310 selected: it is blue among warm rooms, and its chart is a perfectly flat line at 23.5 °C from 10 September" loading="lazy">
-            <figcaption class="i18n" data-ko='310호는 더운 방들 사이에서 혼자 파랗습니다. 그래프: 9월 10일부터 23.5 °C 로 완전히 평평. 센서가 멈췄습니다. 민원 C026 도 확인하세요.'>Room 310 is blue among warm rooms. Its chart: a perfectly flat 23.5 °C since 10 September. The sensor is stuck. Read ticket C026 too.</figcaption>
-          </figure>
-        </div>
-        <p class="i18n" data-ko='트윈에서 눈으로 찾은 것을 <strong>규칙</strong>으로 만들면 매일 자동으로 검사할 수 있습니다. 실제 건물의 고장 진단(FDD) 소프트웨어도 이런 규칙을 수백 개 씁니다.'>Anything you find by eye in the twin can be turned into a <strong>rule</strong> and checked automatically every day. Real fault detection and diagnostics (FDD) software runs hundreds of rules like these.</p>
-        <div class="code">
-          <div class="code-head"><span class="code-tag">find_faults.py</span><button class="copy">copy</button></div>
-<pre><code>import numpy as np
-import pandas as pd
-
-from complaints_rooms import locate
-
-rooms = pd.read_csv("data/rooms_ko.csv", dtype={"room": str}).set_index("room")
-sensors = pd.read_csv("data/sensors.csv", dtype={"room": str})
-readings = pd.read_csv("data/readings.csv", parse_dates=["timestamp"])
-wide = readings.pivot(index="timestamp", columns="point_id", values="value")
-full = pd.date_range(wide.index.min(), wide.index.max(), freq="15min")
-wide = wide.reindex(full)  <span class="cmt"># missing readings become NaN</span>
-
-
-def periods(mask, min_steps=2):
-    """Turn a True/False series into (start, end) periods that last at least min_steps readings."""
-    out, start, n = [], None, 0
-    for t, on in mask.items():
-        if on:
-            start, n = (t if start is None else start), n + 1
-        else:
-            if start is not None and n &gt;= min_steps:
-                out.append((start, prev))
-            start, n = None, 0
-        prev = t
-    if start is not None and n &gt;= min_steps:
-        out.append((start, prev))
-    return out
-
-
-<span class="cmt"># 1. Rule-based fault detection on the AHUs:</span>
-<span class="cmt">#    fan on + valve almost fully open + supply air still warm = the coil is not cooling</span>
-print("1. AHU rule: fan on AND valve &gt;= 95 % AND supply air &gt; 18 °C for 30 min or more")
-for ahu in ["AHU1", "AHU2"]:
-    rule = (wide[f"{ahu}.SF-STS"] == 1) &amp; (wide[f"{ahu}.CHW-VLV"] &gt;= 95) &amp; (wide[f"{ahu}.SAT"] &gt; 18)
-    found = periods(rule, min_steps=2)
-    print(f"   {ahu}: {len(found)} periods", *[f"\n     {a:%a %d %H:%M} -&gt; {b:%a %d %H:%M}" for a, b in found])
-
-<span class="cmt"># 2. Stuck sensors: a temperature that does not change at all for 12 hours or more</span>
-print("\n2. Stuck sensors (same temperature for 12 h or more)")
-for pid in [c for c in wide if c.endswith("ZN-T")]:
-    same = wide[pid].ffill().diff().abs() &lt; 1e-9  <span class="cmt"># ffill: a gap in the data is not a change</span>
-    longest = max(periods(same, 1), key=lambda p: p[1] - p[0], default=None)
-    if longest and longest[1] - longest[0] &gt;= pd.Timedelta(hours=12):
-        print(f"   {pid}: {wide[pid][longest[0]]} °C from {longest[0]:%a %d %H:%M} to {longest[1]:%a %d %H:%M}")
-
-<span class="cmt"># 3. Gaps: when did many sensors go silent at the same time?</span>
-print("\n3. Data gaps (time steps where more than 20 points sent nothing)")
-missing = wide.isna().sum(axis=1)
-for a, b in periods(missing &gt; 20, 1):
-    silent = wide.loc[a].index[wide.loc[a].isna()]
-    rooms_silent = sorted({p.split(".")[1][1:] for p in silent if ".R" in p})
-    print(f"   {a:%a %d %H:%M} -&gt; {b:%H:%M}: {missing[a]} points, rooms {rooms_silent[0]}…{rooms_silent[-1]}")
-
-<span class="cmt"># 4. Drift: at night (03-05 h) every room is empty, so CO2 should fall back to outdoor air (~420 ppm)</span>
-print("\n4. CO2 drift (night-time minimum rising by more than 8 ppm per day)")
-night = wide[(wide.index.hour &gt;= 3) &amp; (wide.index.hour &lt; 5)]
-for pid in [c for c in wide if c.endswith("ZN-CO2")]:
-    daily_min = night[pid].resample("D").min().dropna()
-    slope = np.polyfit(np.arange(len(daily_min)), daily_min.to_numpy(), 1)[0]
-    if slope &gt; 8:
-        print(f"   {pid}: +{slope:.0f} ppm/day, night minimum {daily_min.iloc[0]:.0f} -&gt; {daily_min.iloc[-1]:.0f} ppm")
-
-<span class="cmt"># 5. Do the complaints agree? Tickets received while the AHU-2 rule was firing (+ 1 day after)</span>
-tickets = pd.read_csv("data/complaints.csv", parse_dates=["received", "closed_at"])
-tickets[["room", "floor"]] = tickets.text.apply(lambda t: pd.Series(locate(t)))
-rule2 = periods((wide["AHU2.SF-STS"] == 1) &amp; (wide["AHU2.CHW-VLV"] &gt;= 95) &amp; (wide["AHU2.SAT"] &gt; 18), 2)
-start, end = rule2[0][0], rule2[-1][1] + pd.Timedelta(days=1)
-during = tickets[(tickets.received &gt;= start) &amp; (tickets.received &lt;= end)]
-in_zone = during.room.map(lambda r: rooms.ahu.get(r, "?") if isinstance(r, str) else "?")
-print(f"\n5. {len(during)} tickets between {start:%a %d %H:%M} and {end:%a %d %H:%M}; "
-      f"AHU of their rooms: {in_zone.value_counts().to_dict()}")</code></pre>
-        </div>
-        <div class="code">
-          <div class="code-head"><span class="code-tag i18n" data-ko='실행 결과'>run it · output</span><button class="copy">copy</button></div>
-<pre><code><span class="pr">$ </span>uv run find_faults.py
-1. AHU rule: fan on AND valve &gt;= 95 % AND supply air &gt; 18 °C for 30 min or more
-   AHU1: 0 periods
-   AHU2: 3 periods 
-     Wed 16 13:15 -&gt; Wed 16 20:45 
-     Thu 17 07:00 -&gt; Thu 17 20:45 
-     Fri 18 07:00 -&gt; Fri 18 10:30
-
-2. Stuck sensors (same temperature for 12 h or more)
-   AHU2.R310.ZN-T: 23.5 °C from Thu 10 09:30 to Sun 20 23:45
-
-3. Data gaps (time steps where more than 20 points sent nothing)
-   Mon 14 10:00 -&gt; 14:15: 75 points, rooms 301…322
-
-4. CO2 drift (night-time minimum rising by more than 8 ppm per day)
-   AHU1.R105.ZN-CO2: +21 ppm/day, night minimum 395 -&gt; 670 ppm
-
-5. 18 tickets between Wed 16 13:15 and Sat 19 10:30; AHU of their rooms: {'AHU-2': 14, 'AHU-1': 3, '?': 1}</code></pre>
-        </div>
-        <div class="tree">
-          <table>
-            <tr><td>1 · AHU-2</td><td class="i18n" data-ko='냉수 밸브 고착. 16일 13:15 ~ 18일 10:30 (수리). 2·3층 남향 방이 과열되고 민원이 몰렸습니다.'>Chilled-water valve stuck, Wed 16 13:15 until the repair on Fri 18 10:30. The south rooms on 2F/3F overheated and the complaints piled up.</td></tr>
-            <tr><td>2 · 310</td><td class="i18n" data-ko='온도 센서가 23.5 °C 에서 멈춤. 방은 더운데 BMS는 &quot;정상&quot; 으로 봅니다. 가장 위험한 고장은 <strong>조용한</strong> 고장입니다.'>Temperature sensor stuck at 23.5 °C. The room is hot, but the BMS thinks it is fine. The most dangerous faults are the <strong>quiet</strong> ones.</td></tr>
-            <tr><td>3 · 3F</td><td class="i18n" data-ko='14일 10:00~14:15 3층 전체가 데이터 없음. 네트워크 장애 (민원 C011 &quot;인터넷이 끊겼어요&quot;). 트윈에서 짙은 회색으로 보입니다.'>No data from all of 3F on Mon 14, 10:00–14:15: a network outage (ticket C011, "the internet was down"). It shows dark grey in the twin.</td></tr>
-            <tr><td>4 · 105</td><td class="i18n" data-ko='CO2 센서가 하루 약 20 ppm씩 올라감 (드리프트). 3단계에서 &quot;가장 답답한 방&quot; 이었던 105호는 사실 <strong>센서 문제</strong>였습니다. 교정이 필요합니다.'>CO2 sensor drifting up about 20 ppm a day. Room 105, the "stuffiest room" in step 3, is really a <strong>sensor problem</strong>. It needs recalibration.</td></tr>
-            <tr><td>+ · 006</td><td class="i18n" data-ko='세미나실은 화·목 대형 강의(약 55명)에 CO2 1500 ppm. 환기 설계가 30명 기준입니다. 고장이 아니라 <strong>설계/운영</strong> 문제입니다. Colour by = CO2 로 9월 15일 14:30 을 보세요.'>The seminar room hits 1500 ppm CO2 during the big Tue/Thu lecture (about 55 people), but its ventilation was designed for 30. This is not a fault; it is a <strong>design/operation</strong> problem. See it with Colour by = CO2 on 15 September at 14:30.</td></tr>
-          </table>
-        </div>
-        <figure>
-          <img src="assets/week11_twin_co2.jpg" alt="Basement coloured by CO2 on Tuesday 15 September at 14:30: the large seminar room 006 is dark red at 1505 ppm with 54 people, and its panel lists six tickets" loading="lazy">
-          <figcaption class="i18n" data-ko='9월 15일(화) 14:30, 지하, Colour by = CO2: 세미나실 1505 ppm, 54명. 민원 목록에 &quot;답답하다&quot; 는 글이 반복됩니다.'>Tuesday 15 September 14:30, B1, Colour by = CO2: the seminar room at 1505 ppm with 54 people. Its tickets keep saying "stuffy".</figcaption>
-        </figure>
-        <div class="callout tip">
-          <div class="ci">i</div>
-          <div><span class="ct i18n" data-ko='오늘의 핵심'>The point of today</span>
-            <p class="i18n" data-ko='데이터 하나만 보면 놓치는 것을 트윈은 보여 줍니다. 민원만 보면 &quot;여기저기 덥다&quot;, 센서만 보면 &quot;숫자가 많다&quot;, BIM만 보면 &quot;방이 82개&quot; 입니다. <strong>방 번호와 공조 구역으로 연결하는 순간</strong> &quot;AHU-2의 밸브&quot; 라는 원인 하나가 보입니다. 디지털 트윈은 멋진 3D가 아니라 <strong>연결된 데이터</strong>입니다.'>The twin shows what any single source misses. The complaints alone say "it's hot here and there"; the sensors alone are "lots of numbers"; the BIM alone is "82 rooms". <strong>The moment you join them on room number and AHU zone</strong>, one cause appears: AHU-2's valve. A digital twin is not a pretty 3D model; it is <strong>joined-up data</strong>.</p>
-          </div>
-        </div>
-        <div class="callout tip">
-          <div class="ci">i</div>
-          <div><span class="ct i18n" data-ko='직접 해 보기'>Try it yourself</span>
-            <ul>
-              <li class="i18n" data-ko='<code class="ic">find_faults.py</code> 에 규칙을 하나 더 만들어 보세요: &quot;근무 시간에 사람이 0명인데 냉방 중인 방&quot; (에너지 낭비).'>Add a rule to <code class="ic">find_faults.py</code>: "a room being cooled during working hours with nobody in it" (wasted energy).</li>
-              <li class="i18n" data-ko='트윈 패널에 <strong>Humidity</strong> 레이어를 추가해 보세요 (<code class="ic">LAYERS</code> 에 한 줄). 고장 중에 습도는 어떻게 변하나요?'>Add a <strong>Humidity</strong> layer to the twin (one line in <code class="ic">LAYERS</code>). What happens to humidity during the fault?</li>
-              <li class="i18n" data-ko='도전 (선택): 9주차의 에이전트에 <code class="ic">get_room_status(room)</code> 도구를 주고 &quot;203호 민원이 왜 많아?&quot; 라고 물어보세요.'>Challenge (optional): give the Week 9 agent a <code class="ic">get_room_status(room)</code> tool and ask it "why are there so many complaints from 203?"</li>
-            </ul>
-          </div>
-        </div>
-        <div class="done-row"><button class="done-btn" data-done="s6"><span class="box"></span><span class="done-label"> Mark step done</span></button></div>
       </div>
     </section>
 
@@ -1340,20 +1173,6 @@ print(f"\n5. {len(during)} tickets between {start:%a %d %H:%M} and {end:%a %d %H
           <pre><code>uv run twin_chat.py</code></pre>
         </div>
         <p class="i18n" data-ko='왼쪽 아래에 <strong>Assistant</strong> 창이 떠 있습니다 (끌어서 옮길 수 있습니다). 질문을 쓰고 <strong>Ask</strong> 를 누르세요. 답 아래의 <strong>LLM command</strong> 줄은 모델이 만든 명령입니다. 모델이 무엇을 이해했는지 그대로 보입니다.'>A floating <strong>Assistant</strong> window sits at the bottom left (drag it anywhere). Type a question and press <strong>Ask</strong>. The <strong>LLM command</strong> line under the answer is the command the model produced, so you see exactly what it understood.</p>
-        <figure>
-          <img src="assets/week11_chat_faults.jpg" alt="The twin after asking 'which room has the most faults?': the second floor is shown, room 205 is solid orange while the other rooms are faded, and the Assistant window says 205 has 6 h of alarm time today, with the top 3 rooms and the LLM command find_room alarm_hours highest" loading="lazy">
-          <figcaption class="i18n" data-ko='&quot;which room has the most faults?&quot; → 2층이 열리고, 205호만 진하게, 카메라가 그 방으로. 오늘 알람 6시간. 아래 줄에 LLM 이 만든 명령 <code class="ic">find_room alarm_hours highest</code>.'>"which room has the most faults?" → 2F opens, only 205 stays solid and the camera flies to it: 6 h of alarm time today. The bottom line shows the LLM's command, <code class="ic">find_room alarm_hours highest</code>.</figcaption>
-        </figure>
-        <div class="fig-pair">
-          <figure>
-            <img src="assets/week11_chat_co2.jpg" alt="After asking 'take me to the stuffiest room': the basement is shown coloured by CO2, the seminar room 006 is dark red at 1555 ppm with 55 people, and the top 3 list shows 105 second at 1135 ppm" loading="lazy">
-            <figcaption class="i18n" data-ko='&quot;take me to the stuffiest room&quot; → 세미나실 1555 ppm. 2위가 105호 (1135 ppm) 인 것도 보세요. 6단계에서 찾은 <strong>센서 드리프트</strong>입니다. LLM 은 그걸 모릅니다.'>"take me to the stuffiest room" → the seminar room, 1555 ppm. Note that 105 comes second (1135 ppm): that is the <strong>drifting sensor</strong> from step 6. The LLM cannot know that.</figcaption>
-          </figure>
-          <figure>
-            <img src="assets/week11_chat_ahu2.jpg" alt="After asking 'what is wrong with AHU-2?': the whole building with only the AHU-2 rooms solid and mostly red, and the side panel showing supply air 23.6 °C against a setpoint of 14 °C with the valve at 99 %" loading="lazy">
-            <figcaption class="i18n" data-ko='&quot;what is wrong with AHU-2?&quot; → AHU-2 구역과 그래프. 원인 (밸브 고착) 은 여전히 <strong>여러분이</strong> 그래프에서 읽어야 합니다.'>"what is wrong with AHU-2?" → the AHU-2 zone and its chart. Reading the cause (the stuck valve) from the chart is still <strong>your</strong> job.</figcaption>
-          </figure>
-        </div>
         <div class="callout verify">
           <div class="ci">✓</div>
           <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
@@ -1426,7 +1245,6 @@ print(f"\n5. {len(during)} tickets between {start:%a %d %H:%M} and {end:%a %d %H
         "# 3 · sensor data and comfort",
         "# 4 · find the room in each complaint",
         "# 5 · the digital twin -> http://localhost:8080",
-        "# 6 · automatic fault checks",
         "# + · extra: AI assistant in the twin (Ollama running, gemma3:4b pulled)"],
     ko:["# 0 · 새 프로젝트와 데이터",
         "# 1 · BIM 모델 열어 보기",
@@ -1434,7 +1252,6 @@ print(f"\n5. {len(during)} tickets between {start:%a %d %H:%M} and {end:%a %d %H
         "# 3 · 센서 데이터와 쾌적성",
         "# 4 · 민원에서 방 번호 찾기",
         "# 5 · 디지털 트윈 -> http://localhost:8080",
-        "# 6 · 자동 고장 검사",
         "# + · 추가: 트윈 속 AI 도우미 (Ollama 실행, gemma3:4b 필요)"]
   };
 
@@ -1489,8 +1306,7 @@ print(f"\n5. {len(during)} tickets between {start:%a %d %H:%M} and {end:%a %d %H
     cm(3); L.push("uv run sensor_data.py");
     cm(4); L.push("uv run complaints_rooms.py");
     cm(5); L.push("uv run twin_app.py");
-    cm(6); L.push("uv run find_faults.py");
-    cm(7); L.push("uv add ollama");
+    cm(6); L.push("uv add ollama");
     L.push(curl+" -L -o twin_chat.py https://mugojames254.github.io/smart_facility_coursework/code/week11/twin_chat.py");
     L.push("uv run twin_chat.py");
     return L.join("\n");
@@ -1514,7 +1330,7 @@ print(f"\n5. {len(during)} tickets between {start:%a %d %H:%M} and {end:%a %d %H
   });
 
   /* ---- done tracking + progress ---- */
-  var steps=["s0","s1","s2","s3","s4","s5","s6"], done={};
+  var steps=["s0","s1","s2","s3","s4","s5"], done={};
   try{ done=JSON.parse(localStorage.getItem(KEY_DONE))||{}; }catch(e){ done={}; }
   function saveDone(){ try{ localStorage.setItem(KEY_DONE, JSON.stringify(done)); }catch(e){} }
   function refresh(){

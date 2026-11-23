@@ -15,7 +15,7 @@ Students start at the course home page, which lists every class and links to its
 - `week04.html` — Week 4 practical: uv project workflow + exploring UGV scan data (point clouds)
 - `week05.html` — Week 5 practical: meshes — surface reconstruction and measuring the corridor
 - `week09.html` — Week 9 practical: LLMs with Ollama — complaint triage, RAG on a manual, photo inspection, tool-using agent
-- `week11.html` — Week 11 practical: digital twin — IFC model + BMS sensor data + complaints joined on room number, clickable 3D twin with viser, fault detection
+- `week11.html` — Week 11 practical: digital twin — IFC model + BMS sensor data + complaints joined on room number, clickable 3D twin with viser, local LLM assistant (extra practice)
 - `setup_guide.md` — environment setup instructions (Git, PyTorch, etc.)
 - `smart_facility_setup.pptx` — Week 2 slides: class program installation
 - `point_cloud_lecture.pptx` — Week 4 lecture slides: what point cloud data is (15 slides, with speaker notes)
