@@ -1288,6 +1288,108 @@ print(f"\n5. {len(during)} tickets between {start:%a %d %H:%M} and {end:%a %d %H
       </div>
     </section>
 
+    <!-- EXTRA : LLM ASSISTANT IN THE TWIN -->
+    <section class="step" id="x1">
+      <div class="stepnum"><div class="dot"><span>+</span></div></div>
+      <div class="step-body">
+        <h2 class="i18n" data-ko='추가 실습: 로컬 LLM 으로 트윈에게 물어보기'>Extra practice: ask the twin with a local LLM</h2>
+        <p class="i18n" data-ko='9주차에 Ollama 로 <code class="ic">gemma3:4b</code> 를 내 노트북에서 실행했습니다. 이제 그 모델을 트윈에 붙여 <strong>채팅 도우미</strong>를 만듭니다. &quot;3층에서 제일 더운 방으로 가 줘&quot; 라고 쓰면, 트윈이 그 층을 열고, 방을 골라 강조하고, 카메라를 그 방으로 <strong>자동으로 이동</strong>합니다.'>In Week 9 you ran <code class="ic">gemma3:4b</code> on your own laptop with Ollama. Now we connect that model to the twin as a <strong>chat assistant</strong>. Type "take me to the hottest room on 3F" and the twin opens that floor, selects and highlights the room, and <strong>flies the camera to it</strong> by itself.</p>
+        <p class="i18n" data-ko='<strong>어떻게 동작하나요?</strong> LLM 은 센서 값을 <strong>보지 않습니다</strong>. 역할을 나눕니다:'><strong>How does it work?</strong> The LLM <strong>never sees the sensor values</strong>. The work is split:</p>
+        <ol>
+          <li class="i18n" data-ko='<strong>LLM:</strong> 질문을 정해진 <code class="ic">Command</code> (JSON) 하나로 바꿉니다. 9주차 에이전트와 같은 pydantic + <code class="ic">format=</code> 방법입니다.'><strong>The LLM</strong> turns your question into one fixed <code class="ic">Command</code> (JSON), the same pydantic + <code class="ic">format=</code> trick as the Week 9 agent.</li>
+          <li class="i18n" data-ko='<strong>pandas:</strong> 슬라이더의 시각에서 데이터로 방을 찾고 순위를 매깁니다.'><strong>pandas</strong> finds and ranks the rooms in the data, at the time on the slider.</li>
+          <li class="i18n" data-ko='<strong>viser:</strong> 층을 고르고, 방을 강조하고, <code class="ic">client.camera</code> 로 카메라를 부드럽게 옮깁니다.'><strong>viser</strong> picks the floor, highlights the room and glides the camera there with <code class="ic">client.camera</code>.</li>
+        </ol>
+        <p class="i18n" data-ko='왜 이렇게 나눌까요? 4B 모델은 방 80개의 숫자를 정확히 비교하지 못하고, 자신 있게 <strong>없는 답을 지어냅니다</strong>. LLM 은 <strong>질문을 이해</strong>하고, 숫자는 <strong>코드가 데이터에서</strong> 가져옵니다. 그래서 답에 나오는 값은 모두 진짜 데이터입니다.'>Why split it? A 4B model cannot reliably compare the numbers of 80 rooms, and it will confidently <strong>make up an answer</strong>. The LLM <strong>understands the question</strong>; the <strong>code takes the numbers from the data</strong>. So every value in the answer is real.</p>
+        <div class="tree">
+          <table>
+            <tr><td>find_room</td><td class="i18n" data-ko='가장 높은/낮은 방. 기준: 온도, CO2, 습도, 사람 수, 열린 민원, 알람 시간 (오늘 26 °C 또는 1000 ppm 을 넘은 시간). 예: &quot;which room has the most faults?&quot;, &quot;2층에서 제일 답답한 방은?&quot;'>The highest or lowest room by temperature, CO2, humidity, people, open tickets, or alarm time (time today above 26 °C or 1000 ppm). E.g. "which room has the most faults?", "2층에서 제일 답답한 방은?"</td></tr>
+            <tr><td>go_to_room</td><td class="i18n" data-ko='방 하나로 이동. 번호나 이름 모두 됩니다 (이름은 4단계의 <code class="ic">locate</code> 로 찾습니다). 예: &quot;303호 보여 줘&quot;, &quot;show me 세미나실&quot;'>Go to one room, by number or by name (names are found with <code class="ic">locate</code> from step 4). E.g. "303호 보여 줘", "show me 세미나실"</td></tr>
+            <tr><td>show_ahu</td><td class="i18n" data-ko='공조기 구역과 급기·밸브 그래프. 예: &quot;what is wrong with AHU-2?&quot;'>An AHU's zone and its supply-air and valve chart. E.g. "what is wrong with AHU-2?"</td></tr>
+            <tr><td>reset_view</td><td class="i18n" data-ko='건물 전체 보기로 돌아가기. 예: &quot;처음 화면으로&quot;'>Back to the whole building. E.g. "show the whole building"</td></tr>
+            <tr><td>answer</td><td class="i18n" data-ko='인사나 &quot;무엇을 할 수 있어?&quot; 같은 질문에는 짧게 대답만 합니다.'>Greetings and "what can you do?": a short reply, nothing moves.</td></tr>
+          </table>
+        </div>
+        <p class="i18n" data-ko='<strong>준비:</strong> Ollama 가 실행 중이고 <code class="ic">ollama list</code> 에 <code class="ic">gemma3:4b</code> 가 보여야 합니다 (없으면 <code class="ic">ollama pull gemma3:4b</code>). 그리고 프로젝트에 ollama 라이브러리를 추가합니다:'><strong>Before you start:</strong> Ollama must be running and <code class="ic">ollama list</code> must show <code class="ic">gemma3:4b</code> (if not, run <code class="ic">ollama pull gemma3:4b</code>). Then add the ollama library to the project:</p>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='모든 시스템'>all systems</span><button class="copy">copy</button></div>
+<pre><code>uv add ollama</code></pre>
+        </div>
+        <p class="i18n" data-ko='코드가 길어서 (약 430줄) 이번에는 복사하지 않고 <strong>파일로 받습니다</strong>. 5단계의 <code class="ic">twin_app.py</code> 에 4번 부분 (AI 도우미) 을 더한 것입니다. 2단계의 <code class="ic">twin_geometry.py</code> 와 4단계의 <code class="ic">complaints_rooms.py</code> 를 쓰므로 <strong>같은 프로젝트 폴더</strong>에 저장하세요.'>The code is long (about 430 lines), so this time you <strong>download the file</strong> instead of copying it. It is <code class="ic">twin_app.py</code> from step 5 plus a new part 4, the AI assistant. It uses <code class="ic">twin_geometry.py</code> (step 2) and <code class="ic">complaints_rooms.py</code> (step 4), so save it in the <strong>same project folder</strong>.</p>
+        <div class="btn-row" style="margin:0 0 16px">
+          <a class="slides-btn" href="code/week11/twin_chat.py" download="twin_chat.py">
+            <span aria-hidden="true">⬇</span>
+            <span class="i18n" data-ko='twin_chat.py 내려받기'>Download twin_chat.py</span>
+          </a>
+        </div>
+        <p class="i18n" data-ko='또는 명령줄에서 (프로젝트 폴더 안에서):'>Or from the command line, inside the project folder:</p>
+        <div data-os="win-cmd" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · Command Prompt</span><button class="copy">copy</button></div>
+<pre><code>curl -L -o twin_chat.py https://mugojames254.github.io/smart_facility_coursework/code/week11/twin_chat.py</code></pre>
+          </div>
+        </div>
+        <div data-os="win-ps" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">Windows · PowerShell</span><button class="copy">copy</button></div>
+<pre><code>curl.exe -L -o twin_chat.py https://mugojames254.github.io/smart_facility_coursework/code/week11/twin_chat.py</code></pre>
+          </div>
+        </div>
+        <div data-os="mac linux" class="osblock">
+          <div class="code">
+            <div class="code-head"><span class="code-tag">macOS / Linux</span><button class="copy">copy</button></div>
+<pre><code>curl -L -o twin_chat.py https://mugojames254.github.io/smart_facility_coursework/code/week11/twin_chat.py</code></pre>
+          </div>
+        </div>
+        <div class="code">
+          <div class="code-head"><span class="code-tag i18n" data-ko='실행 후 브라우저에서 http://localhost:8080 열기'>run, then open http://localhost:8080 in your browser</span><button class="copy">copy</button></div>
+          <pre><code>uv run twin_chat.py</code></pre>
+        </div>
+        <p class="i18n" data-ko='왼쪽 아래에 <strong>Assistant</strong> 창이 떠 있습니다 (끌어서 옮길 수 있습니다). 질문을 쓰고 <strong>Ask</strong> 를 누르세요. 답 아래의 <strong>LLM command</strong> 줄은 모델이 만든 명령입니다. 모델이 무엇을 이해했는지 그대로 보입니다.'>A floating <strong>Assistant</strong> window sits at the bottom left (drag it anywhere). Type a question and press <strong>Ask</strong>. The <strong>LLM command</strong> line under the answer is the command the model produced, so you see exactly what it understood.</p>
+        <figure>
+          <img src="assets/week11_chat_faults.jpg" alt="The twin after asking 'which room has the most faults?': the second floor is shown, room 205 is solid orange while the other rooms are faded, and the Assistant window says 205 has 6 h of alarm time today, with the top 3 rooms and the LLM command find_room alarm_hours highest" loading="lazy">
+          <figcaption class="i18n" data-ko='&quot;which room has the most faults?&quot; → 2층이 열리고, 205호만 진하게, 카메라가 그 방으로. 오늘 알람 6시간. 아래 줄에 LLM 이 만든 명령 <code class="ic">find_room alarm_hours highest</code>.'>"which room has the most faults?" → 2F opens, only 205 stays solid and the camera flies to it: 6 h of alarm time today. The bottom line shows the LLM's command, <code class="ic">find_room alarm_hours highest</code>.</figcaption>
+        </figure>
+        <div class="fig-pair">
+          <figure>
+            <img src="assets/week11_chat_co2.jpg" alt="After asking 'take me to the stuffiest room': the basement is shown coloured by CO2, the seminar room 006 is dark red at 1555 ppm with 55 people, and the top 3 list shows 105 second at 1135 ppm" loading="lazy">
+            <figcaption class="i18n" data-ko='&quot;take me to the stuffiest room&quot; → 세미나실 1555 ppm. 2위가 105호 (1135 ppm) 인 것도 보세요. 6단계에서 찾은 <strong>센서 드리프트</strong>입니다. LLM 은 그걸 모릅니다.'>"take me to the stuffiest room" → the seminar room, 1555 ppm. Note that 105 comes second (1135 ppm): that is the <strong>drifting sensor</strong> from step 6. The LLM cannot know that.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/week11_chat_ahu2.jpg" alt="After asking 'what is wrong with AHU-2?': the whole building with only the AHU-2 rooms solid and mostly red, and the side panel showing supply air 23.6 °C against a setpoint of 14 °C with the valve at 99 %" loading="lazy">
+            <figcaption class="i18n" data-ko='&quot;what is wrong with AHU-2?&quot; → AHU-2 구역과 그래프. 원인 (밸브 고착) 은 여전히 <strong>여러분이</strong> 그래프에서 읽어야 합니다.'>"what is wrong with AHU-2?" → the AHU-2 zone and its chart. Reading the cause (the stuck valve) from the chart is still <strong>your</strong> job.</figcaption>
+          </figure>
+        </div>
+        <div class="callout verify">
+          <div class="ci">✓</div>
+          <div><span class="ct i18n" data-ko='제대로 됐는지 확인'>Check it worked</span>
+            <p class="i18n" data-ko='시각을 바꾸지 않은 채 (9월 17일 15:30) <em>which room has the most faults?</em> 를 물으면 <strong>205호, 6 h</strong> 가 나오고 카메라가 2층으로 갑니다. 한국어로도 물어보세요: <em>3층에서 제일 더운 방 보여줘</em> → 301호, 29.2 °C.'>Without changing the time (17 September, 15:30), ask <em>which room has the most faults?</em>: you get <strong>205, 6 h</strong>, and the camera goes to 2F. Ask in Korean too: <em>3층에서 제일 더운 방 보여줘</em> → 301, 29.2 °C.</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <div class="ci">!</div>
+          <div><span class="ct i18n" data-ko='안 될 때'>If it does not work</span>
+            <ul>
+              <li class="i18n" data-ko='답 대신 <code class="ic">⚠ ConnectionError</code> → Ollama 가 꺼져 있습니다. Ollama 를 실행하고 다시 Ask.'><code class="ic">⚠ ConnectionError</code> instead of an answer → Ollama is not running. Start it and press Ask again.</li>
+              <li class="i18n" data-ko='<code class="ic">model &quot;gemma3:4b&quot; not found</code> → <code class="ic">ollama pull gemma3:4b</code>.'><code class="ic">model "gemma3:4b" not found</code> → run <code class="ic">ollama pull gemma3:4b</code>.</li>
+              <li class="i18n" data-ko='첫 질문은 모델을 메모리에 올리느라 10초쯤 걸립니다. 그다음은 노트북에서 보통 2~5초.'>The first question takes about 10 seconds while the model loads; after that, usually 2–5 seconds on a laptop.</li>
+              <li class="i18n" data-ko='엉뚱한 곳으로 가면 <strong>LLM command</strong> 줄을 보세요. 모델이 질문을 잘못 이해한 것입니다. 코드의 <code class="ic">SYSTEM</code> 프롬프트 <code class="ic">Examples</code> 에 그 질문을 한 줄 추가하면 대개 고쳐집니다.'>It goes to the wrong place → read the <strong>LLM command</strong> line: the model misread the question. Adding that question as one line under <code class="ic">Examples</code> in the <code class="ic">SYSTEM</code> prompt usually fixes it.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout tip">
+          <div class="ci">i</div>
+          <div><span class="ct i18n" data-ko='코드 읽기와 직접 해 보기'>Read the code, then try</span>
+            <ul>
+              <li class="i18n" data-ko='4번 부분에서 다섯 가지를 찾아보세요: <code class="ic">Command</code> (LLM 이 고를 수 있는 것), <code class="ic">SYSTEM</code> (규칙과 예시), <code class="ic">ask_llm</code>, <code class="ic">rank_rooms</code> (숫자는 여기서), <code class="ic">fly_to</code> (카메라).'>In part 4, find five things: <code class="ic">Command</code> (what the LLM may choose), <code class="ic">SYSTEM</code> (rules and examples), <code class="ic">ask_llm</code>, <code class="ic">rank_rooms</code> (where the numbers come from) and <code class="ic">fly_to</code> (the camera).</li>
+              <li class="i18n" data-ko='새 기준을 추가해 보세요: &quot;면적이 가장 큰 방&quot; (<code class="ic">rooms.area_m2</code>). <code class="ic">Command</code>, <code class="ic">METRICS</code>, <code class="ic">value_now</code> 세 곳을 고치면 됩니다.'>Add a new metric: "the biggest room" (<code class="ic">rooms.area_m2</code>). You need to change three places: <code class="ic">Command</code>, <code class="ic">METRICS</code> and <code class="ic">value_now</code>.</li>
+              <li class="i18n" data-ko='도전: &quot;어제 오후 3시에 제일 더운 방&quot; 처럼 <strong>시각</strong>도 묻게 해 보세요. <code class="ic">Command</code> 에 <code class="ic">day</code> 와 <code class="ic">hour</code> 를 넣고 슬라이더를 옮기면 됩니다.'>Challenge: let users ask about a <strong>time</strong> too, e.g. "the hottest room yesterday at 3 pm". Add <code class="ic">day</code> and <code class="ic">hour</code> to <code class="ic">Command</code> and move the sliders.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <!-- CHEAT SHEET -->
@@ -1330,14 +1432,16 @@ print(f"\n5. {len(during)} tickets between {start:%a %d %H:%M} and {end:%a %d %H
         "# 3 · sensor data and comfort",
         "# 4 · find the room in each complaint",
         "# 5 · the digital twin -> http://localhost:8080",
-        "# 6 · automatic fault checks"],
+        "# 6 · automatic fault checks",
+        "# + · extra: AI assistant in the twin (Ollama running, gemma3:4b pulled)"],
     ko:["# 0 · 새 프로젝트와 데이터",
         "# 1 · BIM 모델 열어 보기",
         "# 2 · 건물을 3D로 보기 -> http://localhost:8080 (끝낼 때 Ctrl+C)",
         "# 3 · 센서 데이터와 쾌적성",
         "# 4 · 민원에서 방 번호 찾기",
         "# 5 · 디지털 트윈 -> http://localhost:8080",
-        "# 6 · 자동 고장 검사"]
+        "# 6 · 자동 고장 검사",
+        "# + · 추가: 트윈 속 AI 도우미 (Ollama 실행, gemma3:4b 필요)"]
   };
 
   /* ---- i18n: capture English HTML, swap on demand ---- */
@@ -1392,6 +1496,9 @@ print(f"\n5. {len(during)} tickets between {start:%a %d %H:%M} and {end:%a %d %H
     cm(4); L.push("uv run complaints_rooms.py");
     cm(5); L.push("uv run twin_app.py");
     cm(6); L.push("uv run find_faults.py");
+    cm(7); L.push("uv add ollama");
+    L.push(curl+" -L -o twin_chat.py https://mugojames254.github.io/smart_facility_coursework/code/week11/twin_chat.py");
+    L.push("uv run twin_chat.py");
     return L.join("\n");
   }
   var tagText={ "win-cmd":"Windows · cmd","win-ps":"Windows · PowerShell","mac":"macOS","linux":"Linux" };
