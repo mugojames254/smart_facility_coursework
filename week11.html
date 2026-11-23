@@ -1137,18 +1137,12 @@ while True:
       </div>
     </section>
 
-    <!-- STEP 6 : INVESTIGATE -->
+    <!-- STEP 6 : FAULT CHECKS -->
     <section class="step" id="s6">
       <div class="stepnum"><div class="dot"><span>6</span></div></div>
       <div class="step-body">
-        <h2 class="i18n" data-ko='조사: 9월 16~17일에 무슨 일이 있었나?'>Investigate: what happened on 16–17 September?</h2>
-        <p class="i18n" data-ko='시설팀처럼 생각해 봅시다. 트윈을 열어 두고 아래 순서대로 함께 따라갑니다.'>Think like the facility team. Keep the twin open and follow these steps together.</p>
-        <ol>
-          <li class="i18n" data-ko='<strong>어디가?</strong> Floor = All, 9월 17일 15:30. 빨간 방은 2층·3층 남쪽에 몰려 있습니다.'><strong>Where?</strong> Floor = All, 17 September 15:30. The red rooms are all on the south side of 2F and 3F.</li>
-          <li class="i18n" data-ko='<strong>언제부터?</strong> Day = 9월 16일, ▶ Play. 오후 1시쯤부터 빨개지기 시작합니다. 9월 8일(더 더운 날)도 재생해 비교해 보세요.'><strong>Since when?</strong> Day = 16 September, ▶ Play. The rooms start turning red around 13:00. Replay 8 September (a hotter day) to compare.</li>
-          <li class="i18n" data-ko='<strong>공통점은?</strong> AHU zone = AHU-2. 빨간 방은 모두 AHU-2 구역입니다. 패널의 그래프: 급기 온도가 설정값 14 °C 가 아니라 <strong>23 °C 넘게</strong> 나오고, 냉수 밸브는 <strong>100 %</strong> 열려 있습니다.'><strong>What do they share?</strong> AHU zone = AHU-2. Every red room is in the AHU-2 zone. The panel chart: supply air is <strong>above 23 °C</strong> instead of the 14 °C setpoint, while the chilled-water valve is <strong>100 %</strong> open.</li>
-          <li class="i18n" data-ko='<strong>결론:</strong> 밸브에 &quot;100 % 열어&quot; 라고 명령했는데도 공기가 차가워지지 않습니다. 밸브가 실제로는 <strong>거의 닫힌 채 고착</strong>된 것입니다. 9주차 매뉴얼의 알람 E01 (급기 온도 높음) 과 같은 상황입니다.'><strong>Conclusion:</strong> the controller commands the valve "100 % open", yet the air doesn't get colder. The valve is actually <strong>stuck nearly shut</strong>. This is alarm E01 (supply air temperature high) from the Week 9 manual.</li>
-        </ol>
+        <h2 class="i18n" data-ko='고장 자동으로 찾기'>Find the faults automatically</h2>
+        <p class="i18n" data-ko='트윈으로 9월 16~17일과 310호를 둘러본 뒤 (AHU zone = AHU-2 도 골라 보세요), 눈으로 본 것을 규칙으로 바꿉니다.'>Look around 16–17 September and room 310 in the twin (try AHU zone = AHU-2), then turn what you see into rules.</p>
         <div class="fig-pair">
           <figure>
             <img src="assets/week11_twin_ahu2.jpg" alt="AHU-2 zone selected: rooms outside the zone are faded, the 2F and 3F south rooms are red, and the panel reports supply air 23.6 °C against a setpoint of 14 °C with the valve at 99 %" loading="lazy">
